@@ -1,0 +1,40 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'config/theme.dart';
+import 'config/routes.dart';
+import 'providers/auth_provider.dart';
+import 'screens/home/home_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: AppTheme.lightBg,
+  ));
+
+  runApp(const WayfarerApp());
+}
+
+class WayfarerApp extends StatelessWidget {
+  const WayfarerApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
+      ],
+      child: MaterialApp(
+        title: 'Wayfarer',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        routes: AppRoutes.routes,
+        onGenerateRoute: AppRoutes.onGenerateRoute,
+        home: const HomeScreen(),
+      ),
+    );
+  }
+}

@@ -1,0 +1,56 @@
+name: wayfarer
+description: "Wayfarer - Your Ultimate Travel Companion"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  
+  # HTTP & Networking
+  dio: ^5.4.0
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # Storage
+  shared_preferences: ^2.2.2
+  
+  # Maps
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  
+  # Location
+  geolocator: ^13.0.2
+  geocoding: ^3.0.0
+  
+  # UI Components
+  google_fonts: ^6.1.0
+  flutter_animate: ^4.5.0
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.1
+  fl_chart: ^0.69.0
+  
+  # Image handling
+  image_picker: ^1.0.7
+  
+  # Utilities
+  intl: ^0.19.0
+  url_launcher: ^6.2.3
+  flutter_svg: ^2.0.9
+  
+  # Barcode
+  mobile_scanner: ^6.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
