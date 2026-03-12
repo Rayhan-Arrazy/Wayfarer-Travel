@@ -1,7 +1,6 @@
 class AppConstants {
   // API Base URL - change this to your server IP/domain
-  static const String baseUrl = 'http://10.0.2.2:5000/api'; // Android emulator
-  // static const String baseUrl = 'http://localhost:5000/api'; // iOS simulator / Web
+  static const String baseUrl = 'http://localhost:5000/api';
   
   // App Info
   static const String appName = 'Wayfarer';
