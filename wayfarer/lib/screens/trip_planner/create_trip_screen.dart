@@ -24,7 +24,6 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
   String _selectedCountryCode = '';
   List<dynamic> _countrySuggestions = [];
   bool _isLoading = false;
-  bool _isSearching = false;
 
   @override
   void dispose() {
@@ -39,16 +38,14 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
       setState(() => _countrySuggestions = []);
       return;
     }
-    setState(() => _isSearching = true);
     try {
       final response = await _api.searchCountries(query);
       final List data = response.data;
       setState(() {
         _countrySuggestions = data.take(8).toList();
-        _isSearching = false;
       });
     } catch (e) {
-      setState(() => _isSearching = false);
+      // Ignore
     }
   }
 
@@ -111,22 +108,25 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Trip created successfully! ✈️'), backgroundColor: AppTheme.successColor),
-        );
-        Navigator.pop(context);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Trip created successfully! ✈️'), backgroundColor: AppTheme.successColor),
+          );
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create trip: $e'), backgroundColor: AppTheme.errorColor),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create trip: $e'), backgroundColor: AppTheme.errorColor),
+        );
+      }
     }
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('MMM dd, yyyy');
 
     return Scaffold(
       backgroundColor: AppTheme.lightBg,

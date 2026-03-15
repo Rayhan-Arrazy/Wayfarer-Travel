@@ -154,7 +154,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         
                         // Currency Dropdown
                         DropdownButtonFormField<String>(
-                          value: _selectedCurrency,
+                          initialValue: _selectedCurrency,
                           dropdownColor: AppTheme.lightSurface,
                           style: const TextStyle(color: AppTheme.textPrimary),
                           decoration: const InputDecoration(

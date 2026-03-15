@@ -28,7 +28,6 @@ class ApiService {
       },
       onError: (error, handler) {
         if (error.response?.statusCode == 401) {
-          // Token expired
           _token = null;
         }
         return handler.next(error);
@@ -53,8 +52,8 @@ class ApiService {
       'name': name,
       'email': email,
       'password': password,
-      if (homeCurrency != null) 'homeCurrency': homeCurrency,
-      if (homeCountry != null) 'homeCountry': homeCountry,
+      'homeCurrency': homeCurrency,
+      'homeCountry': homeCountry,
     });
   }
 
@@ -82,7 +81,9 @@ class ApiService {
 
   // Trips
   Future<Response> getTrips({String? status}) async {
-    return _dio.get('/trips', queryParameters: {if (status != null) 'status': status});
+    final params = <String, dynamic>{};
+    if (status != null) params['status'] = status;
+    return _dio.get('/trips', queryParameters: params);
   }
 
   Future<Response> getTrip(String id) async {
@@ -107,7 +108,9 @@ class ApiService {
 
   // Journal
   Future<Response> getJournalEntries({String? tripId}) async {
-    return _dio.get('/journal', queryParameters: {if (tripId != null) 'tripId': tripId});
+    final params = <String, dynamic>{};
+    if (tripId != null) params['tripId'] = tripId;
+    return _dio.get('/journal', queryParameters: params);
   }
 
   Future<Response> createJournalEntry(Map<String, dynamic> data) async {
@@ -128,7 +131,9 @@ class ApiService {
 
   // Favorites
   Future<Response> getFavorites({String? type}) async {
-    return _dio.get('/favorites', queryParameters: {if (type != null) 'type': type});
+    final params = <String, dynamic>{};
+    if (type != null) params['type'] = type;
+    return _dio.get('/favorites', queryParameters: params);
   }
 
   Future<Response> addFavorite(Map<String, dynamic> data) async {
@@ -161,11 +166,15 @@ class ApiService {
   }
 
   Future<Response> getAstronomy(double lat, double lng, {String? date}) async {
-    return _dio.get('/proxy/weather/astronomy', queryParameters: {'lat': lat, 'lng': lng, if (date != null) 'date': date});
+    final params = <String, dynamic>{'lat': lat, 'lng': lng};
+    if (date != null) params['date'] = date;
+    return _dio.get('/proxy/weather/astronomy', queryParameters: params);
   }
 
   Future<Response> getExchangeRates(String from, {String? to}) async {
-    return _dio.get('/proxy/currency/rates', queryParameters: {'from': from, if (to != null) 'to': to});
+    final params = <String, dynamic>{'from': from};
+    if (to != null) params['to'] = to;
+    return _dio.get('/proxy/currency/rates', queryParameters: params);
   }
 
   Future<Response> convertCurrency(String from, String to, double amount) async {
@@ -177,11 +186,10 @@ class ApiService {
   }
 
   Future<Response> searchPlaces(String query, {double? lat, double? lng}) async {
-    return _dio.get('/proxy/places/search', queryParameters: {
-      'q': query,
-      if (lat != null) 'lat': lat,
-      if (lng != null) 'lng': lng,
-    });
+    final params = <String, dynamic>{'q': query};
+    if (lat != null) params['lat'] = lat;
+    if (lng != null) params['lng'] = lng;
+    return _dio.get('/proxy/places/search', queryParameters: params);
   }
 
   Future<Response> reverseGeocode(double lat, double lng) async {
@@ -189,17 +197,20 @@ class ApiService {
   }
 
   Future<Response> getNearbyPlaces(double lat, double lng, String type, {int? radius}) async {
-    return _dio.get('/proxy/places/nearby', queryParameters: {
-      'lat': lat, 'lng': lng, 'type': type, if (radius != null) 'radius': radius,
-    });
+    final params = <String, dynamic>{'lat': lat, 'lng': lng, 'type': type};
+    if (radius != null) params['radius'] = radius;
+    return _dio.get('/proxy/places/nearby', queryParameters: params);
   }
 
   Future<Response> getRoute(double startLat, double startLng, double endLat, double endLng, {String? profile}) async {
-    return _dio.get('/proxy/places/route', queryParameters: {
-      'startLat': startLat, 'startLng': startLng,
-      'endLat': endLat, 'endLng': endLng,
-      if (profile != null) 'profile': profile,
-    });
+    final params = <String, dynamic>{
+      'startLat': startLat,
+      'startLng': startLng,
+      'endLat': endLat,
+      'endLng': endLng,
+    };
+    if (profile != null) params['profile'] = profile;
+    return _dio.get('/proxy/places/route', queryParameters: params);
   }
 
   Future<Response> getWikipediaSummary(String place) async {
@@ -207,11 +218,10 @@ class ApiService {
   }
 
   Future<Response> searchRestaurants(double lat, double lng, {String? query, int? radius}) async {
-    return _dio.get('/proxy/food/restaurants', queryParameters: {
-      'lat': lat, 'lng': lng,
-      if (query != null) 'query': query,
-      if (radius != null) 'radius': radius,
-    });
+    final params = <String, dynamic>{'lat': lat, 'lng': lng};
+    if (query != null) params['query'] = query;
+    if (radius != null) params['radius'] = radius;
+    return _dio.get('/proxy/food/restaurants', queryParameters: params);
   }
 
   Future<Response> getCuisineByCountry(String country) async {
@@ -228,20 +238,25 @@ class ApiService {
 
   Future<Response> getTransportRoutes(double fromLat, double fromLng, double toLat, double toLng) async {
     return _dio.get('/proxy/transport/routes', queryParameters: {
-      'fromLat': fromLat, 'fromLng': fromLng, 'toLat': toLat, 'toLng': toLng,
+      'fromLat': fromLat,
+      'fromLng': fromLng,
+      'toLat': toLat,
+      'toLng': toLng,
     });
   }
 
   Future<Response> getTransitStops(double lat, double lng, {int? radius}) async {
-    return _dio.get('/proxy/transport/transit', queryParameters: {
-      'lat': lat, 'lng': lng, if (radius != null) 'radius': radius,
-    });
+    final params = <String, dynamic>{'lat': lat, 'lng': lng};
+    if (radius != null) params['radius'] = radius;
+    return _dio.get('/proxy/transport/transit', queryParameters: params);
   }
 
   Future<Response> searchFlights(String origin, String destination, String departureDate, {int adults = 1}) async {
     return _dio.get('/proxy/transport/flights', queryParameters: {
-      'origin': origin, 'destination': destination,
-      'departureDate': departureDate, 'adults': adults,
+      'origin': origin,
+      'destination': destination,
+      'departureDate': departureDate,
+      'adults': adults,
     });
   }
 
@@ -250,30 +265,29 @@ class ApiService {
   }
 
   Future<Response> getNearbyHospitals(double lat, double lng, {int? radius}) async {
-    return _dio.get('/proxy/emergency/hospitals', queryParameters: {
-      'lat': lat, 'lng': lng, if (radius != null) 'radius': radius,
-    });
+    final params = <String, dynamic>{'lat': lat, 'lng': lng};
+    if (radius != null) params['radius'] = radius;
+    return _dio.get('/proxy/emergency/hospitals', queryParameters: params);
   }
 
   Future<Response> getHealthAlerts() async {
     return _dio.get('/proxy/emergency/health-alerts');
   }
 
-  Future<Response> sendSOS(List<Map<String, String>> contacts, Map<String, dynamic> location, {String? message}) async {
+  Future<Response> sendSOS(List<Map<String, dynamic>> contacts, Map<String, dynamic> location, {String? message}) async {
     return _dio.post('/proxy/emergency/sos', data: {
       'contacts': contacts,
       'location': location,
-      if (message != null) 'message': message,
+      'message': message,
     });
   }
 
   // Accommodation
   Future<Response> searchAccommodation(double lat, double lng, {String? type, int? radius}) async {
-    return _dio.get('/proxy/accommodation/search', queryParameters: {
-      'lat': lat, 'lng': lng,
-      if (type != null) 'type': type,
-      if (radius != null) 'radius': radius,
-    });
+    final params = <String, dynamic>{'lat': lat, 'lng': lng};
+    if (type != null) params['type'] = type;
+    if (radius != null) params['radius'] = radius;
+    return _dio.get('/proxy/accommodation/search', queryParameters: params);
   }
 
   Future<Response> getAccommodationDetails(String id) async {
@@ -286,11 +300,10 @@ class ApiService {
   }
 
   Future<Response> getAdminUsers({int page = 1, int limit = 20, String? search, String? role}) async {
-    return _dio.get('/admin/users', queryParameters: {
-      'page': page, 'limit': limit,
-      if (search != null) 'search': search,
-      if (role != null) 'role': role,
-    });
+    final params = <String, dynamic>{'page': page, 'limit': limit};
+    if (search != null) params['search'] = search;
+    if (role != null) params['role'] = role;
+    return _dio.get('/admin/users', queryParameters: params);
   }
 
   Future<Response> updateAdminUser(String id, Map<String, dynamic> data) async {

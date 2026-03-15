@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
-import '../../services/api_service.dart';
 
 class CurrencyScreen extends StatefulWidget {
   const CurrencyScreen({super.key});
@@ -11,324 +10,217 @@ class CurrencyScreen extends StatefulWidget {
 }
 
 class _CurrencyScreenState extends State<CurrencyScreen> {
-  final ApiService _api = ApiService();
-  final _amountController = TextEditingController(text: '100');
-  
-  String _fromCurrency = 'USD';
-  String _toCurrency = 'EUR';
-  double _rate = 0;
-  double _result = 0;
-  bool _isLoading = false;
-  Map<String, dynamic> _rates = {};
-
-  final List<String> _currencies = ['USD', 'EUR', 'GBP', 'JPY', 'IDR', 'SGD', 'AUD', 'CAD', 'CHF', 'CNY', 'KRW', 'THB', 'MYR', 'INR', 'BRL', 'ZAR', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'TRY', 'RUB', 'PHP', 'VND', 'TWD', 'HKD', 'NZD', 'AED'];
-  final List<String> _cities = ['Tokyo', 'London', 'New York', 'Paris', 'Singapore', 'Bali'];
-  String _selectedCity = 'Tokyo';
-  Map<String, dynamic>? _costOfLivingData;
-  bool _isLoadingCol = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _convert();
-    _loadCostOfLiving();
-  }
-
-  Future<void> _loadCostOfLiving() async {
-    setState(() => _isLoadingCol = true);
-    try {
-      final response = await _api.getCostOfLiving(_selectedCity);
-      setState(() {
-        _costOfLivingData = response.data;
-        _isLoadingCol = false;
-      });
-    } catch (e) {
-      setState(() => _isLoadingCol = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _convert() async {
-    setState(() => _isLoading = true);
-    try {
-      final response = await _api.convertCurrency(_fromCurrency, _toCurrency, double.tryParse(_amountController.text) ?? 100);
-      final data = response.data;
-      setState(() {
-        _rate = (data['rate'] ?? 0).toDouble();
-        _result = (data['result'] ?? 0).toDouble();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _swap() {
-    setState(() {
-      final temp = _fromCurrency;
-      _fromCurrency = _toCurrency;
-      _toCurrency = temp;
-    });
-    _convert();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.lightBg,
-      appBar: AppBar(
-        title: Text('Currency & Finance', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Converter Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: AppTheme.cardGradient,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.lightBorder),
-              ),
-              child: Column(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Custom Top Bar matching reference
+              _buildTopBar(context),
+
+              const SizedBox(height: 10),
+              Text('Tokyo, Japan', 
+                style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+              const SizedBox(height: 4),
+              Text('CURRENCY CONVERTER', 
+                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.textMuted, letterSpacing: 1.2)),
+
+              const SizedBox(height: 32),
+
+              // Currency Conversion Card
+              _buildConverterCard(),
+
+              const SizedBox(height: 24),
+
+              // High Affordability Card
+              _buildAffordabilityCard(),
+
+              const SizedBox(height: 32),
+
+              // Recent Tokyo Expenses
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Currency Converter', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                  const SizedBox(height: 20),
-                  
-                  // Amount input
-                  TextField(
-                    controller: _amountController,
-                    keyboardType: TextInputType.number,
-                    style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-                    textAlign: TextAlign.center,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                      filled: true,
-                      fillColor: AppTheme.lightBg,
-                    ),
-                    onChanged: (_) => _convert(),
+                  Text('Recent Tokyo Expenses', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700)),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: AppTheme.accentColor, borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.add, color: Colors.white, size: 18),
                   ),
-                  const SizedBox(height: 16),
-
-                  // From/To Row
-                  Row(
-                    children: [
-                      Expanded(child: _buildCurrencyDropdown('From', _fromCurrency, (v) {
-                        setState(() => _fromCurrency = v ?? _fromCurrency);
-                        _convert();
-                      })),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: GestureDetector(
-                          onTap: _swap,
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.swap_horiz, color: AppTheme.primaryColor, size: 22),
-                          ),
-                        ),
-                      ),
-                      Expanded(child: _buildCurrencyDropdown('To', _toCurrency, (v) {
-                        setState(() => _toCurrency = v ?? _toCurrency);
-                        _convert();
-                      })),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Result
-                  if (_isLoading)
-                    const CircularProgressIndicator(color: AppTheme.primaryColor)
-                  else
-                    Column(
-                      children: [
-                        Text(
-                          '${_result.toStringAsFixed(2)} $_toCurrency',
-                          style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w800, color: AppTheme.accentColor),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '1 $_fromCurrency = ${_rate.toStringAsFixed(4)} $_toCurrency',
-                          style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary),
-                        ),
-                      ],
-                    ),
                 ],
               ),
-            ),
+              const SizedBox(height: 20),
+              _buildExpenseItem('Ichiran Ramen', 'September, Today', '¥1,200', 'USD 8.20'),
+              _buildExpenseItem('JR East Topup', 'September, Oct 12', '¥5,000', 'USD 34.12'),
+              _buildExpenseItem('Don Quijote', 'September, Oct 10', '¥2,450', 'USD 16.73'),
 
-            const SizedBox(height: 24),
-
-            // Quick rates
-            Text('Popular Rates', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-            const SizedBox(height: 12),
-            _buildQuickRate('USD', 'EUR', '🇺🇸', '🇪🇺'),
-            _buildQuickRate('USD', 'GBP', '🇺🇸', '🇬🇧'),
-            _buildQuickRate('USD', 'JPY', '🇺🇸', '🇯🇵'),
-            _buildQuickRate('EUR', 'GBP', '🇪🇺', '🇬🇧'),
-            _buildQuickRate('USD', 'IDR', '🇺🇸', '🇮🇩'),
-
-            const SizedBox(height: 32),
-
-            // Cost of Living
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Cost of Living', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                DropdownButton<String>(
-                  value: _selectedCity,
-                  dropdownColor: AppTheme.lightSurface,
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.primaryColor),
-                  underline: const SizedBox(),
-                  items: _cities.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      setState(() => _selectedCity = v);
-                      _loadCostOfLiving();
-                    }
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildCostOfLivingCard(),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCurrencyDropdown(String label, String value, ValueChanged<String?> onChanged) {
+  Widget _buildTopBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.menu, color: AppTheme.textPrimary, size: 28),
+          ),
+          const Icon(Icons.help_outline, color: AppTheme.textPrimary, size: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConverterCard() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.lightBg,
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          _buildCurrencyInput('USD', 'US Dollar', '1,250.00', '🇺🇸'),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: AppTheme.primaryColor,
+              child: const Icon(Icons.swap_vert, color: Colors.white, size: 20),
+            ),
+          ),
+          _buildCurrencyInput('JPY', 'Japanese Yen', '182,425.00', '🇯🇵'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrencyInput(String code, String name, String value, String flag) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Text(flag, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(code, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                Text(name, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
+              ],
+            ),
+          ],
+        ),
+        Text(value, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+      ],
+    );
+  }
+
+  Widget _buildAffordabilityCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor,
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
-          DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            underline: const SizedBox(),
-            dropdownColor: AppTheme.lightSurface,
-            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-            items: _currencies.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-            onChanged: onChanged,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickRate(String from, String to, String fromFlag, String toFlag) {
-    return FutureBuilder(
-      future: _api.convertCurrency(from, to, 1),
-      builder: (context, snapshot) {
-        final rate = snapshot.hasData ? (snapshot.data?.data['rate'] ?? 0).toDouble() : 0.0;
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppTheme.lightCard,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.lightBorder),
-          ),
-          child: Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
+              Text('High Affordability', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              const Icon(Icons.trending_up, color: Colors.greenAccent, size: 20),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Your current savings cover 15 days of average spending in Tokyo based on your lifestyle profile.',
+            style: GoogleFonts.inter(fontSize: 12, color: Colors.white70, height: 1.5),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('$fromFlag $from', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(Icons.arrow_forward, size: 16, color: AppTheme.textMuted),
-                  ),
-                  Text('$toFlag $to', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                  Text('¥12,400', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
+                  Text('Avg Daily Cost', style: GoogleFonts.inter(fontSize: 11, color: Colors.white54)),
                 ],
               ),
-              Text(
-                snapshot.hasData ? rate.toStringAsFixed(4) : '...',
-                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.accentColor),
+              ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white24,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('View Analysis', style: TextStyle(fontSize: 12)),
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildCostOfLivingCard() {
-    if (_isLoadingCol) {
-      return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppTheme.primaryColor)));
-    }
-
-    if (_costOfLivingData == null || _costOfLivingData?['categories'] == null) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AppTheme.lightCard, borderRadius: BorderRadius.circular(14)),
-        child: Text('Data not available for $_selectedCity', style: GoogleFonts.inter(color: AppTheme.textSecondary)),
-      );
-    }
-
-    final categories = _costOfLivingData!['categories'] as List;
-    final housing = categories.firstWhere((c) => c['id'] == 'HOUSING', orElse: () => {'score_out_of_10': 5})['score_out_of_10'] * 10;
-    final food = categories.firstWhere((c) => c['id'] == 'COST-OF-LIVING', orElse: () => {'score_out_of_10': 5})['score_out_of_10'] * 10;
-    final safety = categories.firstWhere((c) => c['id'] == 'SAFETY', orElse: () => {'score_out_of_10': 5})['score_out_of_10'] * 10;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.lightCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.lightBorder),
-      ),
-      child: Column(
-        children: [
-          _buildColRow(Icons.home, 'Housing Cost', housing),
-          const SizedBox(height: 12),
-          _buildColRow(Icons.restaurant, 'Food Cost', food),
-          const SizedBox(height: 12),
-          _buildColRow(Icons.health_and_safety, 'Safety Score', safety),
         ],
       ),
     );
   }
 
-  Widget _buildColRow(IconData icon, String label, num value) {
-    return Row(
-      children: [
-        Icon(icon, color: AppTheme.textMuted, size: 20),
-        const SizedBox(width: 12),
-        SizedBox(width: 100, child: Text(label, style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textPrimary))),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: value / 100,
-              backgroundColor: AppTheme.lightSurface,
-              color: value > 70 ? AppTheme.successColor : value > 40 ? AppTheme.warningColor : AppTheme.errorColor,
-              minHeight: 8,
-            ),
+  Widget _buildExpenseItem(String title, String date, String amountJPY, String amountUSD) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: const Color(0xFFF1F5F9),
+                child: Icon(Icons.shopping_bag_outlined, size: 18, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  Text(date, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
+                ],
+              ),
+            ],
           ),
-        ),
-        const SizedBox(width: 12),
-        Text('${value.toStringAsFixed(0)}/100', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
-      ],
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(amountJPY, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+              Text(amountUSD, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
-

@@ -2,52 +2,68 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Brand Colors
-  static const Color primaryColor = Color(0xFFFF6D00); // Vibrant orange
-  static const Color primaryDark = Color(0xFFE65100);
-  static const Color primaryLight = Color(0xFFFF9E80);
-  static const Color accentColor = Color(0xFF00BFA5); // Teal accent
-  static const Color accentDark = Color(0xFF00897B);
+  // Brand Colors - Premium Navy & Gold/Orange
+  static const Color primaryColor = Color(0xFF1E2E46); // Deep Navy
+  static const Color accentColor = Color(0xFFFF6D00); // Vibrant Orange
+  static const Color secondaryColor = Color(0xFF64B5F6); // Soft Blue
   
   // Semantic Colors
-  static const Color successColor = Color(0xFF00C853);
-  static const Color warningColor = Color(0xFFFFAB00);
-  static const Color errorColor = Color(0xFFD50000);
-  static const Color infoColor = Color(0xFF29B6F6);
+  static const Color successColor = Color(0xFF10B981);
+  static const Color warningColor = Color(0xFFF59E0B);
+  static const Color errorColor = Color(0xFFEF4444);
+  static const Color infoColor = Color(0xFF3B82F6);
   
-  // Neutral Colors
-  static const Color lightBg = Color(0xFFF8F9FA); // Off-white app bg
-  static const Color lightCard = Color(0xFFFFFFFF); // Pure white cards
-  static const Color lightSurface = Color(0xFFF1F3F5); // Gray surface
-  static const Color lightBorder = Color(0xFFE9ECEF); // Light border
-  static const Color textPrimary = Color(0xFF212529); // Dark grey/black text
-  static const Color textSecondary = Color(0xFF495057);
-  static const Color textMuted = Color(0xFFADB5BD);
+  // Neutral Colors (Premium Slate Palette)
+  static const Color lightBg = Color(0xFFF8FAFC); 
+  static const Color lightCard = Color(0xFFFFFFFF);
+  static const Color lightSurface = Color(0xFFF1F5F9);
+  static const Color lightBorder = Color(0xFFE2E8F0);
   
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFFFF9E80), Color(0xFFFF6D00)],
+    colors: [primaryColor, Color(0xFF2D4362)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient heroGradient = LinearGradient(
-    colors: [Color(0xFFF8F9FA), Color(0xFFE9ECEF), Color(0xFFF8F9FA)],
+    colors: [Color(0xFFF8FAFC), Color(0xFFEFF6FF)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   static const LinearGradient cardGradient = LinearGradient(
-    colors: [Color(0xFFFFFFFF), Color(0xFFF8F9FA)],
+    colors: [Colors.white, Color(0xFFF8FAFC)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient emergencyGradient = LinearGradient(
-    colors: [Color(0xFFFF5252), Color(0xFFD50000)],
+    colors: [errorColor, Color(0xFFB91C1C)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+  
+  static const Color textPrimary = Color(0xFF0F172A); // Slate 900
+  static const Color textSecondary = Color(0xFF475569); // Slate 600
+  static const Color textMuted = Color(0xFF94A3B8); // Slate 400
+  
+  // Shadows
+  static List<BoxShadow> get premiumShadow => [
+    BoxShadow(
+      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+      blurRadius: 20,
+      offset: const Offset(0, 8),
+    ),
+  ];
+
+  static List<BoxShadow> get cardShadow => [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.03),
+      blurRadius: 10,
+      offset: const Offset(0, 4),
+    ),
+  ];
 
   // Theme Data
   static ThemeData get lightTheme {
@@ -66,18 +82,15 @@ class AppTheme {
         onSurface: textPrimary,
         onError: Colors.white,
       ),
-      textTheme: GoogleFonts.interTextTheme(
-        ThemeData.light().textTheme,
-      ).apply(
-        bodyColor: textPrimary,
-        displayColor: textPrimary,
+      textTheme: GoogleFonts.outfitTextTheme().copyWith(
+        bodyMedium: GoogleFonts.inter(color: textSecondary),
+        bodySmall: GoogleFonts.inter(color: textMuted),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: lightBg,
         elevation: 0,
-        scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.outfit(
           fontSize: 20,
           fontWeight: FontWeight.w700,
           color: textPrimary,
@@ -86,10 +99,9 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: lightCard,
-        elevation: 4,
-        shadowColor: Colors.black.withValues(alpha: 0.05),
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: lightBorder, width: 1),
         ),
       ),
@@ -97,80 +109,14 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: primaryColor.withValues(alpha: 0.3),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
         ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: primaryColor,
-          side: const BorderSide(color: primaryColor, width: 1.5),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.inter(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: lightSurface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: lightBorder),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: lightBorder),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryColor, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: errorColor),
-        ),
-        labelStyle: GoogleFonts.inter(color: textSecondary),
-        hintStyle: GoogleFonts.inter(color: textMuted),
-      ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: lightCard,
-        selectedItemColor: primaryColor,
-        unselectedItemColor: textMuted,
-        type: BottomNavigationBarType.fixed,
-        elevation: 8,
-      ),
-      dividerTheme: const DividerThemeData(
-        color: lightBorder,
-        thickness: 1,
-      ),
-      chipTheme: ChipThemeData(
-        backgroundColor: lightSurface,
-        labelStyle: GoogleFonts.inter(color: textSecondary, fontSize: 13),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: lightBorder),
-        ),
-      ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 4,
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: textPrimary,
-        contentTextStyle: GoogleFonts.inter(color: Colors.white),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }

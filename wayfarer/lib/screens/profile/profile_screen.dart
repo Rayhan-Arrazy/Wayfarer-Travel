@@ -54,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'name': _nameController.text.trim(),
                   'homeCurrency': _selectedCurrency,
                 });
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Profile updated!'), backgroundColor: AppTheme.successColor),
                   );
@@ -106,7 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _selectedCurrency,
+              initialValue: _selectedCurrency,
               dropdownColor: AppTheme.lightSurface,
               style: const TextStyle(color: AppTheme.textPrimary),
               decoration: const InputDecoration(labelText: 'Home Currency', prefixIcon: Icon(Icons.currency_exchange, color: AppTheme.textMuted)),
@@ -211,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               await auth.updateProfile({'emergencyContacts': contacts});
               _contactNameController.clear();
               _contactPhoneController.clear();
-              if (mounted) Navigator.pop(ctx);
+              if (context.mounted) Navigator.pop(ctx);
             },
             child: const Text('Add'),
           ),

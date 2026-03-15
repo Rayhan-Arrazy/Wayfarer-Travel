@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'config/routes.dart';
 import 'providers/auth_provider.dart';
+import 'providers/trip_provider.dart';
 import 'screens/home/home_screen.dart';
 
 void main() async {
@@ -26,6 +27,7 @@ class WayfarerApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
+        ChangeNotifierProvider(create: (_) => TripProvider()),
       ],
       child: MaterialApp(
         title: 'Wayfarer',

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/theme.dart';
-import '../../config/routes.dart';
-import '../../services/api_service.dart';
-import '../../models/journal_model.dart';
-import 'package:intl/intl.dart';
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
@@ -14,249 +11,176 @@ class JournalScreen extends StatefulWidget {
 }
 
 class _JournalScreenState extends State<JournalScreen> {
-  final ApiService _api = ApiService();
-  List<JournalEntryModel> _entries = [];
-  Map<String, dynamic> _stats = {};
-  bool _isLoading = true;
-  bool _showStats = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadEntries();
-    _loadStats();
-  }
-
-  Future<void> _loadEntries() async {
-    setState(() => _isLoading = true);
-    try {
-      final response = await _api.getJournalEntries();
-      final List data = response.data;
-      setState(() {
-        _entries = data.map((e) => JournalEntryModel.fromJson(e)).toList();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _loadStats() async {
-    try {
-      final response = await _api.getJournalStats();
-      setState(() => _stats = response.data);
-    } catch (e) {
-      // Stats optional
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.lightBg,
-      appBar: AppBar(
-        title: Text('Travel Journal', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-        actions: [
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTopBar(context),
+
+              const SizedBox(height: 10),
+              Text('My Travel Logs', 
+                style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+              const SizedBox(height: 4),
+              Text('CAPTURE EVERY MOMENT', 
+                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.textMuted, letterSpacing: 1.2)),
+
+              const SizedBox(height: 32),
+
+              // Summary Stats Card
+              _buildSummaryCard(),
+
+              const SizedBox(height: 32),
+
+              // Journal Entries Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Active Journeys', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: AppTheme.primaryColor, borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.add, color: Colors.white, size: 20),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 24),
+
+              // Journal Feed
+              _buildJournalEntry('Tokyo: First Night at Ichiran', 'Today, 8:45 PM', 'The atmosphere was incredible. Ordering through the vending machine was a cool experience...', 'https://images.unsplash.com/photo-1591814468924-caf88d1232e1?auto=format&fit=crop&w=600'),
+              _buildJournalEntry('Kyoto Temples: Golden Pavilion', 'Yesterday, 2:15 PM', 'Reached Kinkaku-ji. The reflection in the water is exactly like the photos, but more breathtaking in person.', 'https://images.unsplash.com/photo-1493976040372-50b510520638?auto=format&fit=crop&w=600'),
+
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
           IconButton(
-            onPressed: () => setState(() => _showStats = !_showStats),
-            icon: Icon(_showStats ? Icons.list : Icons.bar_chart, color: AppTheme.textSecondary),
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.menu, color: AppTheme.textPrimary, size: 28),
+          ),
+          const Row(
+            children: [
+              Icon(Icons.search, color: AppTheme.textPrimary, size: 24),
+              SizedBox(width: 20),
+              Icon(Icons.more_vert, color: AppTheme.textPrimary, size: 24),
+            ],
           ),
         ],
       ),
-      body: _showStats ? _buildStatsView() : _buildJournalView(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.pushNamed(context, AppRoutes.createJournal);
-          if (result == true) {
-            _loadEntries();
-            _loadStats();
-          }
-        },
-        icon: const Icon(Icons.add),
-        label: Text('New Entry', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-        backgroundColor: AppTheme.primaryColor,
-      ),
     );
   }
 
-  Widget _buildJournalView() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor));
-    }
-    
-    if (_entries.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.book, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
-            const SizedBox(height: 16),
-            Text('No journal entries yet', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
-            const SizedBox(height: 8),
-            Text('Start capturing your travel memories!', style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted)),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadEntries,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _entries.length,
-        itemBuilder: (_, i) => _buildEntryCard(_entries[i]),
-      ),
-    );
-  }
-
-  Widget _buildEntryCard(JournalEntryModel entry) {
+  Widget _buildSummaryCard() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.lightCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.lightBorder),
+        color: AppTheme.primaryColor,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.15), blurRadius: 25, offset: const Offset(0, 12))
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (entry.mood.isNotEmpty)
-                Text(_getMoodEmoji(entry.mood), style: const TextStyle(fontSize: 24)),
-              Text(DateFormat('MMM dd, yyyy • HH:mm').format(entry.createdAt),
-                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
+              _buildStat('Cities', '12'),
+              _buildStat('Countries', '04'),
+              _buildStat('Photos', '248'),
             ],
           ),
-          if (entry.title.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(entry.title, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-          ],
-          if (entry.note.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(entry.note, style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary), maxLines: 3, overflow: TextOverflow.ellipsis),
-          ],
-          if (entry.location != null && entry.location!.name.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.location_on, size: 14, color: AppTheme.primaryColor),
-                const SizedBox(width: 4),
-                Text(entry.location!.name, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.primaryColor)),
-              ],
-            ),
-          ],
-          if (entry.weather != null && entry.weather!.description.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.cloud, size: 14, color: AppTheme.textMuted),
-                const SizedBox(width: 4),
-                Text('${entry.weather!.temp.toStringAsFixed(1)}°C - ${entry.weather!.description}',
-                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
-              ],
-            ),
-          ],
+          const SizedBox(height: 24),
+          const Divider(color: Colors.white12),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(Icons.insights, color: AppTheme.successColor, size: 16),
+              const SizedBox(width: 8),
+              Text('You travel 15% more than average users in 2024', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatsView() {
-    final totalTrips = _stats['totalTrips'] ?? 0;
-    final totalDays = _stats['totalDays'] ?? 0;
-    final countriesVisited = _stats['countriesVisited'] ?? 0;
-    final totalEntries = _stats['totalEntries'] ?? 0;
-    final totalDistance = _stats['totalDistance'] ?? 0;
+  Widget _buildStat(String label, String value) {
+    return Column(
+      children: [
+        Text(value, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
+        Text(label, style: GoogleFonts.inter(fontSize: 10, color: Colors.white60, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+  Widget _buildJournalEntry(String title, String time, String excerpt, String imageUrl) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Travel Stats', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-          const SizedBox(height: 20),
-          
-          Row(
-            children: [
-              _buildStatCard('🌍', 'Countries', countriesVisited.toString(), AppTheme.accentColor),
-              const SizedBox(width: 12),
-              _buildStatCard('✈️', 'Trips', totalTrips.toString(), AppTheme.primaryColor),
-            ],
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: CachedNetworkImage(
+              imageUrl: imageUrl,
+              height: 180,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildStatCard('📅', 'Days', totalDays.toString(), const Color(0xFFFFB74D)),
-              const SizedBox(width: 12),
-              _buildStatCard('📝', 'Entries', totalEntries.toString(), const Color(0xFFE57373)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildStatCard('🛤️', 'km Traveled', totalDistance.toString(), const Color(0xFFBA68C8)),
-              const SizedBox(width: 12),
-              const Expanded(child: SizedBox()),
-            ],
-          ),
-          
-          const SizedBox(height: 24),
-          Text('Visited Countries', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-          const SizedBox(height: 12),
-          if ((_stats['countries'] as List?)?.isNotEmpty == true)
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: (_stats['countries'] as List).map<Widget>((c) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppTheme.lightCard,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(time, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accentColor)),
+                    const Icon(Icons.favorite_border, size: 18, color: AppTheme.textMuted),
+                  ],
                 ),
-                child: Text(c.toString(), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.primaryColor)),
-              )).toList(),
-            )
-          else
-            Text('No countries visited yet', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+                const SizedBox(height: 8),
+                Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                const SizedBox(height: 8),
+                Text(excerpt, maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary, height: 1.5)),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Text('Read more', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_forward, size: 14, color: AppTheme.primaryColor),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
-  }
-
-  Widget _buildStatCard(String emoji, String label, String value, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: AppTheme.lightCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 24)),
-            const SizedBox(height: 8),
-            Text(value, style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800, color: color)),
-            Text(label, style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _getMoodEmoji(String mood) {
-    switch (mood) {
-      case 'amazing': return '🤩';
-      case 'happy': return '😊';
-      case 'neutral': return '😐';
-      case 'tired': return '😴';
-      case 'sad': return '😢';
-      default: return '📝';
-    }
   }
 }

@@ -18,7 +18,7 @@ class _MapScreenState extends State<MapScreen> {
   final _searchController = TextEditingController();
   
   LatLng _center = const LatLng(-6.2088, 106.8456); // Default: Jakarta
-  double _zoom = 13.0;
+  final double _zoom = 13.0;
   List<Marker> _markers = [];
   String _selectedCategory = 'restaurant';
   bool _isLoading = false;
@@ -148,7 +148,7 @@ class _MapScreenState extends State<MapScreen> {
             options: MapOptions(
               initialCenter: _center,
               initialZoom: _zoom,
-              onTap: (_, __) => setState(() => _searchResults = []),
+              onTap: (tapPosition, point) => setState(() => _searchResults = []),
             ),
             children: [
               TileLayer(

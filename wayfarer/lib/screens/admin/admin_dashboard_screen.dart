@@ -157,7 +157,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               ])),
               Switch(
                 value: isActive,
-                activeColor: AppTheme.successColor,
+                activeThumbColor: AppTheme.successColor,
                 onChanged: (val) async {
                   try {
                     await _api.updateAdminUser(u['_id'], {'isActive': val});

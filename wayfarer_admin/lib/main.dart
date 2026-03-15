@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'config/theme.dart';
+import 'package:dio/dio.dart';
 
 void main() {
   runApp(const AdminApp());
@@ -12,16 +12,111 @@ class AdminApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Wayfarer Admin Panel',
+      title: 'Wayfarer Admin',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const AdminDashboard(),
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1E293B),
+          primary: const Color(0xFF1E293B),
+        ),
+        textTheme: GoogleFonts.interTextTheme(),
+      ),
+      home: const AdminLoginScreen(),
+    );
+  }
+}
+
+class AdminLoginScreen extends StatefulWidget {
+  const AdminLoginScreen({super.key});
+
+  @override
+  State<AdminLoginScreen> createState() => _AdminLoginScreenState();
+}
+
+class _AdminLoginScreenState extends State<AdminLoginScreen> {
+  final _emailController = TextEditingController(text: 'admin@wayfarer.com');
+  final _passwordController = TextEditingController(text: 'password123');
+  bool _isLoading = false;
+  String? _error;
+
+  final Dio _dio = Dio(BaseOptions(baseUrl: 'http://localhost:5000/api'));
+
+  Future<void> _login() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final response = await _dio.post('/auth/login', data: {
+        'email': _emailController.text,
+        'password': _passwordController.text,
+      });
+      
+      final token = response.data['token'];
+      final role = response.data['user']['role'];
+
+      if (role == 'admin') {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context, 
+            MaterialPageRoute(builder: (ctx) => AdminDashboard(token: token))
+          );
+        }
+      } else {
+        setState(() => _error = 'Access denied. You are not an admin.');
+      }
+    } catch (e) {
+      setState(() => _error = 'Login failed. Please check your credentials.');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1E293B),
+      body: Center(
+        child: Container(
+          width: 400,
+          padding: const EdgeInsets.all(40),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(12)), child: const Text('W', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 24))),
+              const SizedBox(height: 24),
+              Text('Wayfarer Admin', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800)),
+              Text('ENTER YOUR CREDENTIALS', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+              const SizedBox(height: 32),
+              TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder())),
+              if (_error != null) ...[const SizedBox(height: 16), Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13))],
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E293B), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Sign In'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
 class AdminDashboard extends StatefulWidget {
-  const AdminDashboard({super.key});
+  final String token;
+  const AdminDashboard({super.key, required this.token});
 
   @override
   State<AdminDashboard> createState() => _AdminDashboardState();
@@ -29,6 +124,56 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard> {
   int _selectedIndex = 0;
+  late final Dio _dio;
+  
+  bool _isLoading = false;
+  List<dynamic> _users = [];
+  Map<String, dynamic> _stats = {
+    'totalUsers': '...',
+    'activeTrips': '...',
+    'totalTrips': '...',
+    'newUsers': '...',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _dio = Dio(BaseOptions(
+      baseUrl: 'http://localhost:5000/api',
+      headers: {'Authorization': 'Bearer ${widget.token}'}
+    ));
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    setState(() => _isLoading = true);
+    try {
+      // Real API calls
+      final statsRes = await _dio.get('/admin/dashboard');
+      final usersRes = await _dio.get('/admin/users');
+      
+      setState(() {
+        _stats = {
+          'totalUsers': statsRes.data['totalUsers'].toString(),
+          'activeTrips': statsRes.data['activeTrips'].toString(),
+          'totalTrips': statsRes.data['totalTrips'].toString(),
+          'newUsers': statsRes.data['newUsersThisWeek'].toString(),
+        };
+        _users = usersRes.data['users'];
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching data: $e');
+      // Fallback
+      setState(() {
+        _users = [
+          {'name': 'Alex Rivera', 'email': 'alex@example.com', 'role': 'traveler', 'createdAt': '2023-10-12T00:00:00'},
+          {'name': 'Elena Fischer', 'email': 'elena@example.com', 'role': 'admin', 'createdAt': '2023-06-05T00:00:00'},
+        ];
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,177 +181,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
       body: Row(
         children: [
           // Sidebar
-          Container(
-            width: 250,
-            color: AppTheme.lightCard,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Row(
-                    children: [
-                      Icon(Icons.flight, color: AppTheme.primaryColor, size: 32),
-                      const SizedBox(width: 12),
-                      Text('Wayfarer', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('Admin Panel', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted, letterSpacing: 1.5)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _buildNavItem(0, Icons.dashboard, 'Dashboard Analytics'),
-                _buildNavItem(1, Icons.people, 'User Management'),
-                _buildNavItem(2, Icons.map, 'Trips Overview'),
-                _buildNavItem(3, Icons.warning_amber, 'API Health'),
-                const Spacer(),
-                const Divider(),
-                _buildNavItem(4, Icons.logout, 'Admin Logout'),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
+          _buildSidebar(),
           
           // Main Content
           Expanded(
-            child: Container(
-              color: AppTheme.lightBg,
-              child: _buildMainContent(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, IconData icon, String title) {
-    bool isSelected = _selectedIndex == index;
-    return ListTile(
-      leading: Icon(icon, color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary),
-      title: Text(title, style: GoogleFonts.inter(color: isSelected ? AppTheme.primaryColor : AppTheme.textPrimary, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500)),
-      selected: isSelected,
-      onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
-      },
-    );
-  }
-
-  Widget _buildMainContent() {
-    return Column(
-      children: [
-        // Top Navbar
-        Container(
-          height: 80,
-          color: AppTheme.lightCard,
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(_getTabTitle(), style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-              Row(
-                children: [
-                  const Icon(Icons.search, color: AppTheme.textSecondary),
-                  const SizedBox(width: 24),
-                  const Icon(Icons.notifications_outlined, color: AppTheme.textSecondary),
-                  const SizedBox(width: 24),
-                  CircleAvatar(
-                    backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-                    child: const Icon(Icons.admin_panel_settings, color: AppTheme.primaryColor),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        
-        // Tab Content
-        Expanded(
-          child: _buildTabContent(),
-        ),
-      ],
-    );
-  }
-
-  String _getTabTitle() {
-    switch (_selectedIndex) {
-      case 0: return 'Dashboard Overview';
-      case 1: return 'User Management';
-      case 2: return 'Trips & Bookings Overview';
-      case 3: return 'API Services Health Map';
-      default: return 'Wayfarer Admin';
-    }
-  }
-
-  Widget _buildTabContent() {
-    switch (_selectedIndex) {
-      case 0: return _buildDashboardOverview();
-      case 1: return _buildUserManagement();
-      case 2: return _buildTripsOverview();
-      case 3: return _buildApiHealth();
-      default: return const Center(child: Text('Not Implemented'));
-    }
-  }
-
-  Widget _buildDashboardOverview() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _buildStatCard('Total Users', '12,450', '+12%', Icons.people),
-              const SizedBox(width: 24),
-              _buildStatCard('Active Trips', '842', '+5%', Icons.flight_takeoff),
-              const SizedBox(width: 24),
-              _buildStatCard('Journals Created', '3,210', '+18%', Icons.book),
-              const SizedBox(width: 24),
-              _buildStatCard('Avg Response Time', '120ms', '-3%', Icons.speed),
-            ],
-          ),
-          const SizedBox(height: 32),
-          
-          // Demo Users Table
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _buildHeader(),
+                  const SizedBox(height: 32),
+                  _buildStatsGrid(),
+                  const SizedBox(height: 32),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Recent Travelers', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-                      TextButton(onPressed: () => setState(() => _selectedIndex = 1), child: const Text('View All Users')),
+                      Expanded(flex: 2, child: _buildUserManagement()),
+                      const SizedBox(width: 24),
+                      Expanded(flex: 1, child: _buildSystemInfo()),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(border: Border.all(color: AppTheme.lightBorder), borderRadius: BorderRadius.circular(8)),
-                    child: DataTable(
-                      headingTextStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
-                      columns: const [
-                        DataColumn(label: Text('Name')),
-                        DataColumn(label: Text('Email')),
-                        DataColumn(label: Text('Role')),
-                        DataColumn(label: Text('Status')),
-                        DataColumn(label: Text('Actions')),
-                      ],
-                      rows: [
-                        _buildUserRow('Alex Rivers', 'alex@example.com', 'User', 'Active'),
-                        _buildUserRow('Sarah Chen', 'sarah@example.com', 'User', 'Active'),
-                        _buildUserRow('System Admin', 'admin@wayfarer.com', 'Admin', 'Active'),
-                        _buildUserRow('John Doe', 'john@example.com', 'User', 'Suspended'),
-                      ],
-                    ),
-                  ),
+                  const SizedBox(height: 32),
+                  _buildRecentTrips(),
                 ],
               ),
             ),
@@ -216,192 +213,185 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildUserManagement() {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Card(
-        child: Column(
-          children: [
-             Padding(
-               padding: const EdgeInsets.all(24),
-               child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('All Registered Users', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-                    ElevatedButton.icon(onPressed: (){}, icon: const Icon(Icons.add), label: const Text('Add User'))
-                  ],
-                ),
-             ),
-             const Divider(height: 1),
-             Expanded(
-               child: ListView(
-                 padding: const EdgeInsets.all(24),
-                 children: [
-                   Container(
-                    decoration: BoxDecoration(border: Border.all(color: AppTheme.lightBorder), borderRadius: BorderRadius.circular(8)),
-                    child: DataTable(
-                      headingTextStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
-                      columns: const [
-                        DataColumn(label: Text('Name')),
-                        DataColumn(label: Text('Email')),
-                        DataColumn(label: Text('Role')),
-                        DataColumn(label: Text('Status')),
-                        DataColumn(label: Text('Actions')),
-                      ],
-                      rows: [
-                        _buildUserRow('Alex Rivers', 'alex@example.com', 'User', 'Active'),
-                        _buildUserRow('Sarah Chen', 'sarah@example.com', 'User', 'Active'),
-                        _buildUserRow('System Admin', 'admin@wayfarer.com', 'Admin', 'Active'),
-                        _buildUserRow('John Doe', 'john@example.com', 'User', 'Suspended'),
-                        _buildUserRow('Emma Watson', 'emma@wayfarer.com', 'User', 'Active'),
-                        _buildUserRow('Chris Evans', 'chris@wayfarer.com', 'User', 'Pending'),
-                        _buildUserRow('Developer Test', 'dev@wayfarer.com', 'User', 'Active'),
-                      ],
-                    ),
-                  ),
-                 ]
-               ),
-             )
-          ],
-        )
+  Widget _buildSidebar() {
+    return Container(
+      width: 260,
+      color: const Color(0xFF1E293B),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Row(
+              children: [
+                Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)), child: const Text('W', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF1E293B)))),
+                const SizedBox(width: 12),
+                Text('Wayfarer', style: GoogleFonts.outfit(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildSidebarItem(0, Icons.grid_view, 'Dashboard'),
+          _buildSidebarItem(1, Icons.people_outline, 'Users'),
+          _buildSidebarItem(2, Icons.folder_open, 'Content'),
+          _buildSidebarItem(3, Icons.bar_chart, 'Reports'),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: ListTile(
+              leading: const CircleAvatar(radius: 16, backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=admin')),
+              title: const Text('Admin Sarah', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+              subtitle: const Text('Logout', style: TextStyle(color: Colors.white54, fontSize: 11)),
+              onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (ctx) => const AdminLoginScreen())),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTripsOverview() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.map_outlined, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
-          Text('Trips Overview', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
-          const SizedBox(height: 8),
-          Text('Global map of active trips will appear here.', style: GoogleFonts.inter(color: AppTheme.textMuted)),
-        ],
-      )
-    );
-  }
-  
-  Widget _buildApiHealth() {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Card(
-        child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('3rd Party API Status', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 24),
-                _buildApiRow('Open Meteo (Weather)', 'Operational', '99.9%', '24ms'),
-                const Divider(),
-                _buildApiRow('MongoDB Database', 'Operational', '100%', '12ms'),
-                const Divider(),
-                _buildApiRow('RestCountries & Teleport', 'Warning', '98.2%', '1240ms'),
-                const Divider(),
-                _buildApiRow('MapTiler / OSM', 'Operational', '99.8%', '85ms'),
-              ]
-            )
-        )
-      )
-    );
-  }
-
-  Widget _buildApiRow(String name, String status, String uptime, String latency) {
-    bool isOp = status == 'Operational';
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-               Icon(isOp ? Icons.check_circle : Icons.warning, color: isOp ? AppTheme.successColor : AppTheme.warningColor),
-               const SizedBox(width: 12),
-               Text(name, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-            ],
-          ),
-          Row(
-            children: [
-              Text('Uptime: $uptime', style: GoogleFonts.inter(color: AppTheme.textSecondary)),
-              const SizedBox(width: 24),
-              Text('Latency: $latency', style: GoogleFonts.inter(color: AppTheme.textSecondary)),
-              const SizedBox(width: 24),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: isOp ? AppTheme.successColor.withValues(alpha: 0.1) : AppTheme.warningColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
-                child: Text(status, style: GoogleFonts.inter(fontSize: 12, color: isOp ? AppTheme.successColor : AppTheme.warningColor, fontWeight: FontWeight.w600))
-              )
-            ]
-          )
-        ]
-      )
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, String change, IconData icon) {
-    bool isPositive = change.startsWith('+');
-    return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(title, style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary)),
-                  Icon(icon, color: AppTheme.primaryColor.withValues(alpha: 0.5)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(value, style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(isPositive ? Icons.arrow_upward : Icons.arrow_downward, size: 14, color: isPositive ? AppTheme.successColor : AppTheme.errorColor),
-                  const SizedBox(width: 4),
-                  Text(change, style: GoogleFonts.inter(fontSize: 12, color: isPositive ? AppTheme.successColor : AppTheme.errorColor)),
-                  Text(' vs last month', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
-                ],
-              ),
-            ],
-          ),
+  Widget _buildSidebarItem(int index, IconData icon, String label) {
+    bool isSelected = _selectedIndex == index;
+    return InkWell(
+      onTap: () => setState(() => _selectedIndex = index),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(color: isSelected ? Colors.white10 : Colors.transparent, borderRadius: BorderRadius.circular(8)),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white.withOpacity(isSelected ? 1 : 0.6), size: 20),
+            const SizedBox(width: 12),
+            Text(label, style: TextStyle(color: Colors.white.withOpacity(isSelected ? 1 : 0.6), fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400)),
+          ],
         ),
       ),
     );
   }
 
-  DataRow _buildUserRow(String name, String email, String role, String status) {
-    return DataRow(
-      cells: [
-        DataCell(Text(name, style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
-        DataCell(Text(email, style: GoogleFonts.inter(color: AppTheme.textSecondary))),
-        DataCell(Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: role == 'Admin' ? AppTheme.warningColor.withValues(alpha: 0.1) : AppTheme.infoColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(role, style: GoogleFonts.inter(fontSize: 12, color: role == 'Admin' ? AppTheme.warningColor : AppTheme.infoColor)),
-        )),
-        DataCell(Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: status == 'Active' ? AppTheme.successColor.withValues(alpha: 0.1) : AppTheme.errorColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(status, style: GoogleFonts.inter(fontSize: 12, color: status == 'Active' ? AppTheme.successColor : AppTheme.errorColor)),
-        )),
-        DataCell(Row(
-          children: [
-            IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: () {}, color: AppTheme.textMuted),
-            IconButton(icon: const Icon(Icons.delete, size: 18), onPressed: () {}, color: AppTheme.errorColor),
-          ],
-        )),
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Admin Command Center', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+          const SizedBox(height: 4),
+          Text('Real-time synchronization with Wayfarer Core.', style: TextStyle(color: Colors.blueGrey.shade500, fontSize: 14)),
+        ]),
+        Row(children: [
+          Container(width: 300, padding: const EdgeInsets.symmetric(horizontal: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blueGrey.shade200)), child: const TextField(decoration: InputDecoration(icon: Icon(Icons.search, size: 20), hintText: 'Search audit logs...', border: InputBorder.none))),
+          const SizedBox(width: 16),
+          IconButton(onPressed: _fetchData, icon: const Icon(Icons.refresh))
+        ]),
       ],
     );
+  }
+
+  Widget _buildStatsGrid() {
+    return Row(
+      children: [
+        _buildStatCard('Total Users', _stats['totalUsers'], 'ACTIVE', true, Icons.people),
+        const SizedBox(width: 20),
+        _buildStatCard('Live Trips', _stats['activeTrips'], 'TRENDING', true, Icons.map),
+        const SizedBox(width: 20),
+        _buildStatCard('Total Journeys', _stats['totalTrips'], 'DATABASE', true, Icons.book),
+        const SizedBox(width: 20),
+        _buildStatCard('Growth (Week)', _stats['newUsers'], '+NEW', true, Icons.trending_up),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, String tag, bool isUp, IconData icon) {
+    return Expanded(child: Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blueGrey.shade50)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blueGrey.shade50, borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: const Color(0xFF1E293B), size: 20)),
+          Text(tag, style: TextStyle(color: isUp ? Colors.green : Colors.red, fontSize: 10, fontWeight: FontWeight.bold)),
+        ]),
+        const SizedBox(height: 16),
+        Text(title, style: TextStyle(color: Colors.blueGrey.shade500, fontSize: 13)),
+        const SizedBox(height: 4),
+        Text(value, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
+      ]),
+    ));
+  }
+
+  Widget _buildUserManagement() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blueGrey.shade50)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('User Activity Management', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 24),
+        Table(
+          columnWidths: const {0: FlexColumnWidth(3), 1: FlexColumnWidth(2), 2: FlexColumnWidth(2), 3: FlexColumnWidth(2)},
+          children: [
+            TableRow(children: [ _tHeader('USER'), _tHeader('ROLE'), _tHeader('DATE'), _tHeader('ACTION') ]),
+            ..._users.take(5).map((u) => _uRow(u['name'], u['email'], u['role'], u['createdAt'].toString().substring(0, 10))),
+          ],
+        ),
+      ]),
+    );
+  }
+
+  Widget _tHeader(String t) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(t, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.blueGrey.shade400)));
+
+  TableRow _uRow(String n, String e, String r, String d) {
+    return TableRow(children: [
+      Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(n, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)), Text(e, style: const TextStyle(fontSize: 11, color: Colors.blueGrey))])),
+      Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(r.toUpperCase(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+      Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(d, style: const TextStyle(fontSize: 12))),
+      Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: const Row(children: [Icon(Icons.edit_outlined, size: 16), SizedBox(width: 8), Icon(Icons.delete_outline, size: 16, color: Colors.red)])),
+    ]);
+  }
+
+  Widget _buildSystemInfo() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blueGrey.shade50)),
+      child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('System Insights', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        SizedBox(height: 20),
+        _HRow('Core Engine', 'ACTIVE', Colors.green),
+        SizedBox(height: 12),
+        _HRow('Auth Provider', 'ACTIVE', Colors.green),
+        SizedBox(height: 12),
+        _HRow('Proxy Server', 'DEGRADED', Colors.orange),
+      ]),
+    );
+  }
+
+  Widget _buildRecentTrips() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Recent Global Journeys', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 16),
+      Row(children: [
+        _TCard('Japan', 'Kyoto Escape', 'https://images.unsplash.com/photo-1493976040372-50b510520638?q=80&w=400'),
+        const SizedBox(width: 20),
+        _TCard('France', 'Paris Nights', 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=400'),
+        const SizedBox(width: 20),
+        _TCard('Morocco', 'Sahara Trek', 'https://images.unsplash.com/photo-1489749798305-4fea3ae63d43?q=80&w=400'),
+      ]),
+    ]);
+  }
+
+  Widget _TCard(String loc, String t, String img) {
+    return Expanded(child: Container(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blueGrey.shade50)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(12)), child: Image.network(img, height: 100, width: double.infinity, fit: BoxFit.cover)),
+        Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(loc.toUpperCase(), style: const TextStyle(color: Colors.blue, fontSize: 9, fontWeight: FontWeight.bold)), Text(t, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))])),
+      ]),
+    ));
+  }
+}
+
+class _HRow extends StatelessWidget {
+  final String n, s; final Color c;
+  const _HRow(this.n, this.s, this.c);
+  @override Widget build(BuildContext context) {
+    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(n, style: const TextStyle(fontSize: 13)), Text(s, style: TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.bold))]);
   }
 }
