@@ -167,4 +167,45 @@ router.get('/trips', async (req, res) => {
   }
 });
 
+// @route   PUT /api/admin/trips/:id
+// @desc    Update trip (admin oversight)
+router.put('/trips/:id', async (req, res) => {
+  try {
+    const { status, budget, destination } = req.body;
+    const updateData = {};
+    if (status) updateData.status = status;
+    if (budget) updateData.budget = budget;
+    if (destination) updateData.destination = destination;
+
+    const trip = await Trip.findByIdAndUpdate(
+      req.params.id,
+      { $set: updateData },
+      { new: true }
+    ).populate('userId', 'name email');
+
+    if (!trip) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    res.json(trip);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/admin/trips/:id
+// @desc    Delete trip
+router.delete('/trips/:id', async (req, res) => {
+  try {
+    const trip = await Trip.findByIdAndDelete(req.params.id);
+    if (!trip) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+    await JournalEntry.deleteMany({ tripId: req.params.id });
+    res.json({ message: 'Trip and associated journals deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

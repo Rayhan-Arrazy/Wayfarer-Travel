@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/theme.dart';
+import '../../config/constants.dart';
 import '../../providers/auth_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -121,9 +123,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 28),
                 child: ElevatedButton.icon(
-                  onPressed: () => Navigator.pushNamed(context, '/admin'),
+                  onPressed: () async {
+                    final url = Uri.parse(AppConstants.adminUrl);
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    }
+                  },
                   icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
-                  label: Text('Admin Dashboard', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+                  label: Text('Launch Control Center', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.warningColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),

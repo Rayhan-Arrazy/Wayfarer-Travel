@@ -26,7 +26,7 @@ class TripProvider with ChangeNotifier {
 
       final response = await _dio.get(
         '/trips',
-        options: Options(headers: {'x-auth-token': token}),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {

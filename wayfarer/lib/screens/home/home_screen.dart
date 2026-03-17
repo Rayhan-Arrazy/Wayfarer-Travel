@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/theme.dart';
 import '../../config/routes.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/trip_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,14 +15,84 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TripProvider>().fetchTrips();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final tripProvider = context.watch<TripProvider>();
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Colors.white,
-      body: _buildBody(),
+      drawer: _buildDrawer(),
+      body: tripProvider.isLoading 
+        ? const Center(child: CircularProgressIndicator()) 
+        : _buildBody(),
       bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildDrawer() {
+    final auth = context.watch<AuthProvider>();
+    return Drawer(
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.horizontal(right: Radius.circular(32))),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 80, 24, 40),
+            color: AppTheme.primaryColor,
+            width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CircleAvatar(
+                  radius: 36,
+                  backgroundColor: Colors.white24,
+                  child: Icon(Icons.person, color: Colors.white, size: 40),
+                ),
+                const SizedBox(height: 16),
+                Text(auth.user?.name ?? 'Alex Rivera', 
+                  style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(auth.user?.email ?? 'alex@example.com', 
+                  style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildDrawerItem(Icons.home_outlined, 'Home', () => Navigator.pop(context)),
+          _buildDrawerItem(Icons.map_outlined, 'Navigation', () => Navigator.pushNamed(context, AppRoutes.map)),
+          _buildDrawerItem(Icons.restaurant_outlined, 'Dining & Food', () => Navigator.pushNamed(context, AppRoutes.food)),
+          _buildDrawerItem(Icons.hotel_outlined, 'Accommodation', () => Navigator.pushNamed(context, AppRoutes.accommodation)),
+          _buildDrawerItem(Icons.currency_exchange_outlined, 'Currency Converter', () => Navigator.pushNamed(context, AppRoutes.currency)),
+          _buildDrawerItem(Icons.cloud_outlined, 'Weather Forecast', () => Navigator.pushNamed(context, AppRoutes.weather)),
+          _buildDrawerItem(Icons.book_outlined, 'Travel Journal', () => Navigator.pushNamed(context, AppRoutes.journal)),
+          const Divider(indent: 24, endIndent: 24, height: 40),
+          _buildDrawerItem(Icons.emergency_outlined, 'Emergency SOS', () => Navigator.pushNamed(context, AppRoutes.emergency), color: AppTheme.errorColor),
+          _buildDrawerItem(Icons.logout, 'Sign Out', () => auth.logout(), color: AppTheme.textMuted),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text('Wayfarer v1.0.0', style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textMuted)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(IconData icon, String label, VoidCallback onTap, {Color? color}) {
+    return ListTile(
+      leading: Icon(icon, color: color ?? AppTheme.textPrimary, size: 22),
+      title: Text(label, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: color ?? AppTheme.textPrimary)),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
     );
   }
 
@@ -41,6 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHomePage() {
+    final tripProvider = context.watch<TripProvider>();
     return SafeArea(
       child: CustomScrollView(
         slivers: [
@@ -53,7 +125,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.menu, color: AppTheme.textPrimary, size: 28),
+                      GestureDetector(
+                        onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                        child: const Icon(Icons.menu, color: AppTheme.textPrimary, size: 28),
+                      ),
                       const SizedBox(width: 16),
                       Text('Wayfarer',
                         style: GoogleFonts.outfit(
@@ -102,50 +177,57 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: Container(
-                height: 180,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.15), blurRadius: 30, offset: const Offset(0, 15))
-                  ],
-                ),
-                child: Stack(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(6)),
-                            child: const Text('UPCOMING TRIP', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                          ),
-                          const SizedBox(height: 16),
-                          Text('Kyoto, Japan', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                          const SizedBox(height: 4),
-                          Text('Oct 12 - 20, 2024', style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      right: 20,
-                      top: 20,
-                      bottom: 20,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: CachedNetworkImage(
-                          imageUrl: 'https://images.unsplash.com/photo-1493976040372-50b510520638?q=80&w=400',
-                          width: 140,
-                          fit: BoxFit.cover,
+              child: tripProvider.upcomingTrip == null 
+                ? _buildNoTripCard() 
+                : Container(
+                  height: 180,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.15), blurRadius: 30, offset: const Offset(0, 15))
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(6)),
+                              child: const Text('UPCOMING TRIP', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(tripProvider.upcomingTrip!.destination, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${tripProvider.upcomingTrip!.startDate.toString().substring(0, 10)} - ${tripProvider.upcomingTrip!.endDate.toString().substring(0, 10)}', 
+                              style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                      Positioned(
+                        right: 20,
+                        top: 20,
+                        bottom: 20,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: CachedNetworkImage(
+                            imageUrl: tripProvider.upcomingTrip!.coverImage.isNotEmpty 
+                                ? tripProvider.upcomingTrip!.coverImage 
+                                : 'https://images.unsplash.com/photo-1493976040372-50b510520638?q=80&w=400',
+                            width: 140,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ),
           ),
 
@@ -518,6 +600,33 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), activeIcon: Icon(Icons.explore), label: 'EXPLORE'),
           BottomNavigationBarItem(icon: Icon(Icons.flight_outlined), activeIcon: Icon(Icons.flight), label: 'TRIPS'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'PROFILE'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoTripCard() {
+    return Container(
+      height: 180,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.flight_takeoff, color: AppTheme.textMuted, size: 40),
+          const SizedBox(height: 12),
+          Text('No upcoming trips', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+          const SizedBox(height: 4),
+          Text('Plan your next adventure now', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.createTrip),
+            child: const Text('Create Trip'),
+          ),
         ],
       ),
     );

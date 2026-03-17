@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
+import '../../services/api_service.dart';
 
 class CurrencyScreen extends StatefulWidget {
   const CurrencyScreen({super.key});
@@ -10,6 +11,50 @@ class CurrencyScreen extends StatefulWidget {
 }
 
 class _CurrencyScreenState extends State<CurrencyScreen> {
+  final ApiService _api = ApiService();
+  final _amountController = TextEditingController(text: '100');
+  
+  String _fromCurrency = 'USD';
+  String _toCurrency = 'JPY';
+  double _rate = 150.0;
+  double _result = 15000.0;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRates();
+  }
+
+  Future<void> _fetchRates() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _api.getExchangeRates(_fromCurrency, to: _toCurrency);
+      setState(() {
+        _rate = (response.data['rates'][_toCurrency] as num).toDouble();
+        _convert();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _convert() {
+    final amount = double.tryParse(_amountController.text) ?? 0;
+    setState(() {
+      _result = amount * _rate;
+    });
+  }
+
+  void _swap() {
+    setState(() {
+      final temp = _fromCurrency;
+      _fromCurrency = _toCurrency;
+      _toCurrency = temp;
+    });
+    _fetchRates();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,50 +62,29 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Custom Top Bar matching reference
               _buildTopBar(context),
-
               const SizedBox(height: 10),
-              Text('Tokyo, Japan', 
-                style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-              const SizedBox(height: 4),
-              Text('CURRENCY CONVERTER', 
-                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.textMuted, letterSpacing: 1.2)),
-
-              const SizedBox(height: 32),
-
-              // Currency Conversion Card
-              _buildConverterCard(),
-
-              const SizedBox(height: 24),
-
-              // High Affordability Card
-              _buildAffordabilityCard(),
-
-              const SizedBox(height: 32),
-
-              // Recent Tokyo Expenses
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Recent Tokyo Expenses', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700)),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: AppTheme.accentColor, borderRadius: BorderRadius.circular(8)),
-                    child: const Icon(Icons.add, color: Colors.white, size: 18),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _buildExpenseItem('Ichiran Ramen', 'September, Today', '¥1,200', 'USD 8.20'),
-              _buildExpenseItem('JR East Topup', 'September, Oct 12', '¥5,000', 'USD 34.12'),
-              _buildExpenseItem('Don Quijote', 'September, Oct 10', '¥2,450', 'USD 16.73'),
-
+              Text('Currency', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+              Text('REAL-TIME EXCHANGE RATES', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.textMuted, letterSpacing: 1.2)),
+              
               const SizedBox(height: 40),
+              _buildConverterCard(),
+              
+              const SizedBox(height: 32),
+              Text('Budget Insights', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              _buildInsightCard(),
+              
+              const SizedBox(height: 32),
+              Text('Popular Pairs', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              _buildPair('USD/EUR', '0.92', true),
+              _buildPair('GBP/USD', '1.27', false),
+              _buildPair('USD/IDR', '15,640', true),
             ],
           ),
         ),
@@ -70,15 +94,13 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
 
   Widget _buildTopBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.menu, color: AppTheme.textPrimary, size: 28),
-          ),
-          const Icon(Icons.help_outline, color: AppTheme.textPrimary, size: 24),
+          IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back)),
+          if (_isLoading) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+          IconButton(onPressed: _fetchRates, icon: const Icon(Icons.refresh, color: AppTheme.primaryColor)),
         ],
       ),
     );
@@ -86,137 +108,103 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
 
   Widget _buildConverterCard() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(32),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         children: [
-          _buildCurrencyInput('USD', 'US Dollar', '1,250.00', '🇺🇸'),
+          _buildInputRow(_fromCurrency, _amountController, true),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: AppTheme.primaryColor,
-              child: const Icon(Icons.swap_vert, color: Colors.white, size: 20),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: GestureDetector(
+              onTap: _swap,
+              child: CircleAvatar(
+                radius: 24,
+                backgroundColor: AppTheme.primaryColor,
+                child: const Icon(Icons.swap_vert, color: Colors.white),
+              ),
             ),
           ),
-          _buildCurrencyInput('JPY', 'Japanese Yen', '182,425.00', '🇯🇵'),
+          _buildResultRow(_toCurrency, _result),
         ],
       ),
     );
   }
 
-  Widget _buildCurrencyInput(String code, String name, String value, String flag) {
+  Widget _buildInputRow(String code, TextEditingController controller, bool isInput) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Text(flag, style: const TextStyle(fontSize: 24)),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(code, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-                Text(name, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
-              ],
-            ),
-          ],
+        Expanded(
+          child: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            onChanged: (val) => _convert(),
+            style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold),
+            decoration: const InputDecoration(border: InputBorder.none, hintText: '0.00'),
+          ),
         ),
-        Text(value, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0))),
+          child: Text(code, style: GoogleFonts.inter(fontWeight: FontWeight.w900, fontSize: 16)),
+        ),
       ],
     );
   }
 
-  Widget _buildAffordabilityCard() {
+  Widget _buildResultRow(String code, double value) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(value.toStringAsFixed(2), style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0))),
+          child: Text(code, style: GoogleFonts.inter(fontWeight: FontWeight.w900, fontSize: 16)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInsightCard() {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.primaryColor,
+        gradient: LinearGradient(colors: [AppTheme.primaryColor, AppTheme.primaryColor.withOpacity(0.8)]),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('High Affordability', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-              const Icon(Icons.trending_up, color: Colors.greenAccent, size: 20),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Your current savings cover 15 days of average spending in Tokyo based on your lifestyle profile.',
-            style: GoogleFonts.inter(fontSize: 12, color: Colors.white70, height: 1.5),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('¥12,400', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
-                  Text('Avg Daily Cost', style: GoogleFonts.inter(fontSize: 11, color: Colors.white54)),
-                ],
-              ),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white24,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('View Analysis', style: TextStyle(fontSize: 12)),
-              ),
-            ],
-          ),
+          const Icon(Icons.lightbulb_outline, color: Colors.white, size: 28),
+          const SizedBox(height: 16),
+          Text('Local Power', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+          const SizedBox(height: 4),
+          Text('USD is strong against JPY right now. Good time to book your stays!',
+            style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, height: 1.5)),
         ],
       ),
     );
   }
 
-  Widget _buildExpenseItem(String title, String date, String amountJPY, String amountUSD) {
+  Widget _buildPair(String pair, String rate, bool isUp) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFF1F5F9))),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          Text(pair, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
           Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: const Color(0xFFF1F5F9),
-                child: Icon(Icons.shopping_bag_outlined, size: 18, color: AppTheme.textSecondary),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                  Text(date, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
-                ],
-              ),
-            ],
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(amountJPY, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-              Text(amountUSD, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
+              Text(rate, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              const SizedBox(width: 8),
+              Icon(isUp ? Icons.trending_up : Icons.trending_down, size: 16, color: isUp ? Colors.green : Colors.red),
             ],
           ),
         ],

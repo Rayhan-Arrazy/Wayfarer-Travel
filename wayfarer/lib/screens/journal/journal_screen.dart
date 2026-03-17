@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/theme.dart';
+import '../../services/api_service.dart';
+import '../../config/routes.dart';
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
@@ -11,56 +13,93 @@ class JournalScreen extends StatefulWidget {
 }
 
 class _JournalScreenState extends State<JournalScreen> {
+  final ApiService _api = ApiService();
+  bool _isLoading = true;
+  List<dynamic> _entries = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEntries();
+  }
+
+  Future<void> _fetchEntries() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _api.getJournalEntries();
+      setState(() {
+        _entries = response.data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildTopBar(context),
-
-              const SizedBox(height: 10),
-              Text('My Travel Logs', 
-                style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-              const SizedBox(height: 4),
-              Text('CAPTURE EVERY MOMENT', 
-                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.textMuted, letterSpacing: 1.2)),
-
-              const SizedBox(height: 32),
-
-              // Summary Stats Card
-              _buildSummaryCard(),
-
-              const SizedBox(height: 32),
-
-              // Journal Entries Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Active Journeys', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: AppTheme.primaryColor, borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.add, color: Colors.white, size: 20),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 24),
-
-              // Journal Feed
-              _buildJournalEntry('Tokyo: First Night at Ichiran', 'Today, 8:45 PM', 'The atmosphere was incredible. Ordering through the vending machine was a cool experience...', 'https://images.unsplash.com/photo-1591814468924-caf88d1232e1?auto=format&fit=crop&w=600'),
-              _buildJournalEntry('Kyoto Temples: Golden Pavilion', 'Yesterday, 2:15 PM', 'Reached Kinkaku-ji. The reflection in the water is exactly like the photos, but more breathtaking in person.', 'https://images.unsplash.com/photo-1493976040372-50b510520638?auto=format&fit=crop&w=600'),
-
-              const SizedBox(height: 40),
-            ],
+        child: RefreshIndicator(
+          onRefresh: _fetchEntries,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTopBar(context),
+                const SizedBox(height: 10),
+                Text('My Travel Logs', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w800)),
+                Text('CAPTURE EVERY MOMENT', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.textMuted, letterSpacing: 1.2)),
+                
+                const SizedBox(height: 32),
+                _buildSummaryCard(),
+                
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Active Journeys', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.createJournal),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: AppTheme.primaryColor, borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.add, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 24),
+                if (_isLoading)
+                  const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()))
+                else if (_entries.isEmpty)
+                  _buildEmptyState()
+                else
+                  ..._entries.map((e) => _buildJournalCard(e)).toList(),
+                
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        children: [
+          const SizedBox(height: 60),
+          const Icon(Icons.book_outlined, size: 64, color: AppTheme.textMuted),
+          const SizedBox(height: 16),
+          Text('No journal entries yet', style: GoogleFonts.inter(color: AppTheme.textMuted)),
+          TextButton(onPressed: () => Navigator.pushNamed(context, AppRoutes.createJournal), child: const Text('Write your first log'))
+        ],
       ),
     );
   }
@@ -71,17 +110,8 @@ class _JournalScreenState extends State<JournalScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.menu, color: AppTheme.textPrimary, size: 28),
-          ),
-          const Row(
-            children: [
-              Icon(Icons.search, color: AppTheme.textPrimary, size: 24),
-              SizedBox(width: 20),
-              Icon(Icons.more_vert, color: AppTheme.textPrimary, size: 24),
-            ],
-          ),
+          IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back)),
+          const Icon(Icons.search, size: 24),
         ],
       ),
     );
@@ -93,30 +123,13 @@ class _JournalScreenState extends State<JournalScreen> {
       decoration: BoxDecoration(
         color: AppTheme.primaryColor,
         borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.15), blurRadius: 25, offset: const Offset(0, 12))
-        ],
       ),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildStat('Cities', '12'),
-              _buildStat('Countries', '04'),
-              _buildStat('Photos', '248'),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const Divider(color: Colors.white12),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              const Icon(Icons.insights, color: AppTheme.successColor, size: 16),
-              const SizedBox(width: 8),
-              Text('You travel 15% more than average users in 2024', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
-            ],
-          ),
+          _buildStat('Logs', _entries.length.toString()),
+          _buildStat('Countries', '1'),
+          _buildStat('Photos', _entries.fold<int>(0, (sum, e) => sum + (e['photos']?.length as int? ?? 0)).toString()),
         ],
       ),
     );
@@ -131,7 +144,8 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  Widget _buildJournalEntry(String title, String time, String excerpt, String imageUrl) {
+  Widget _buildJournalCard(dynamic e) {
+    final photo = (e['photos'] as List?)?.isNotEmpty == true ? e['photos'][0]['url'] : null;
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
@@ -142,38 +156,29 @@ class _JournalScreenState extends State<JournalScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            child: CachedNetworkImage(
-              imageUrl: imageUrl,
-              height: 180,
-              width: double.infinity,
-              fit: BoxFit.cover,
+          if (photo != null)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              child: CachedNetworkImage(imageUrl: photo, height: 180, width: double.infinity, fit: BoxFit.cover),
             ),
-          ),
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(time, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accentColor)),
-                    const Icon(Icons.favorite_border, size: 18, color: AppTheme.textMuted),
-                  ],
-                ),
+                Text(e['location']?['name'] ?? 'Unknown Location', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accentColor)),
                 const SizedBox(height: 8),
-                Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                Text(e['title'] ?? 'No Title', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
-                Text(excerpt, maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary, height: 1.5)),
+                Text(e['note'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary, height: 1.5)),
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Text('Read more', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+                    const Icon(Icons.wb_sunny_outlined, size: 14, color: Colors.orange),
                     const SizedBox(width: 4),
-                    const Icon(Icons.arrow_forward, size: 14, color: AppTheme.primaryColor),
+                    Text('${e['weather']?['temp'] ?? '--'}°', style: const TextStyle(fontSize: 12)),
+                    const Spacer(),
+                    Text('Read More', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
                   ],
                 ),
               ],
