@@ -59,20 +59,30 @@ async function seed() {
         homeCurrency: 'EUR',
         homeCountry: 'ES',
         isActive: true
+      },
+      {
+        name: 'Emma Watson',
+        email: 'emma@example.com',
+        password: 'password123',
+        role: 'user',
+        homeCurrency: 'GBP',
+        homeCountry: 'GB',
+        isActive: true
       }
     ]);
-    
-    const marcus = users[1];
-    console.log('--- 4 USERS CREATED ---');
 
-    // 2. Create Diverse Trips for Marcus
+    const marcus = users[1];
+    const emma = users[4]; // New user Emma
+    console.log('--- 5 USERS CREATED ---');
+
+    // 2. Create Diverse Trips for Marcus and Emma
     const trips = await Trip.create([
       {
         userId: marcus._id,
         destination: 'Bali, Indonesia',
         countryCode: 'ID',
         countryName: 'Indonesia',
-        startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), 
+        startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
         endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
         partySize: 2,
         status: 'active',
@@ -89,7 +99,7 @@ async function seed() {
         destination: 'Tokyo, Japan',
         countryCode: 'JP',
         countryName: 'Japan',
-        startDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), 
+        startDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000),
         endDate: new Date(Date.now() + 32 * 24 * 60 * 60 * 1000),
         status: 'planning',
         coverImage: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf',
@@ -104,9 +114,31 @@ async function seed() {
         endDate: new Date(Date.now() + 127 * 24 * 60 * 60 * 1000),
         status: 'planning',
         coverImage: 'https://images.unsplash.com/photo-1531310197839-ccf54634509e'
+      },
+      {
+        userId: marcus._id,
+        destination: 'New York City, USA',
+        countryCode: 'US',
+        countryName: 'United States',
+        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        endDate: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+        status: 'completed',
+        coverImage: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9',
+        budget: { amount: 2000, currency: 'USD' }
+      },
+      {
+        userId: marcus._id,
+        destination: 'Sydney, Australia',
+        countryCode: 'AU',
+        countryName: 'Australia',
+        startDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        endDate: new Date(Date.now() + 70 * 24 * 60 * 60 * 1000),
+        status: 'planning',
+        coverImage: 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9',
+        budget: { amount: 4000, currency: 'USD' }
       }
     ]);
-    console.log('--- 3 TRIPS CREATED ---');
+    console.log('--- 5 TRIPS CREATED ---');
 
     // 3. Create Rich Journal Entries
     await JournalEntry.create([
@@ -136,9 +168,26 @@ async function seed() {
         note: 'Caught my first wave today! Exhausted but finally understand the hype.',
         mood: 'happy',
         weather: { temp: 29, description: 'Sunny', icon: '01d' }
+      },
+      {
+        userId: marcus._id,
+        tripId: trips[3]._id, // New York Trip
+        title: 'Central Park Stroll',
+        note: 'The fall colors in Central Park are amazing. Grabbed a hot dog and just people watched.',
+        location: { lat: 40.7812, lng: -73.9665, name: 'Central Park', country: 'United States' },
+        mood: 'happy',
+        weather: { temp: 15, description: 'Cloudy', icon: '03d' }
+      },
+      {
+        userId: marcus._id,
+        tripId: trips[3]._id, // New York Trip
+        title: 'Broadway Show',
+        note: 'Saw Hamilton! The performance was incredible, worth every penny.',
+        mood: 'amazing',
+        photos: [{ url: 'https://images.unsplash.com/photo-1583643763660-310168be4527', caption: 'Broadway' }]
       }
     ]);
-    console.log('--- 3 JOURNAL ENTRIES CREATED ---');
+    console.log('--- 5 JOURNAL ENTRIES CREATED ---');
 
     // 4. Create Global Favorites
     await Favorite.create([
@@ -165,9 +214,25 @@ async function seed() {
         address: 'Singapore',
         rating: 4.9,
         imageUrl: 'https://images.unsplash.com/photo-1502722823883-da093f71db3a'
+      },
+      {
+        userId: marcus._id,
+        type: 'restaurant',
+        name: 'Ramen Ichiraku',
+        address: 'Tokyo, Japan',
+        rating: 4.6,
+        imageUrl: 'https://images.unsplash.com/photo-1557872943-16a5ac26437e'
+      },
+      {
+        userId: marcus._id,
+        type: 'attraction',
+        name: 'Sydney Opera House',
+        address: 'Sydney, Australia',
+        rating: 4.8,
+        imageUrl: 'https://images.unsplash.com/photo-1624138784614-87fd1b6528f8'
       }
     ]);
-    console.log('--- 3 FAVORITES CREATED ---');
+    console.log('--- 5 FAVORITES CREATED ---');
 
     console.log('--- ALL DATA SEEDED SUCCESSFULLY ---');
     process.exit(0);

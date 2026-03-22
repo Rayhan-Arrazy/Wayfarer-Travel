@@ -50,6 +50,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong!', error: err.message });
 });
 
+// Base API route
+app.get('/api', (req, res) => {
+  res.json({ message: 'Wayfarer API is active' });
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.json({ message: 'Wayfarer API Server' });
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });

@@ -237,21 +237,45 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildTopBar() {
     return Container(
-      height: 80,
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(_getViewTitle(), style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_selectedIndex == 0 ? 'All-in-One Dashboard' : _getViewTitle(), style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+              const SizedBox(height: 4),
+              Text(_selectedIndex == 0 ? 'Welcome back, ${widget.adminName.split(' ')[0]}. Here\'s what\'s happening today.' : 'Manage your system records', style: GoogleFonts.inter(fontSize: 14, color: Colors.blueGrey)),
+            ],
+          ),
           Row(
             children: [
-              IconButton(onPressed: _refreshAll, icon: const Icon(Icons.refresh, color: Colors.blueGrey)),
-              const SizedBox(width: 20),
               Container(
-                height: 40, width: 40,
-                decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.notifications_none, color: Colors.white, size: 20),
+                width: 300,
+                height: 44,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE2E8F0))),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search data...',
+                    hintStyle: GoogleFonts.inter(fontSize: 13, color: Colors.blueGrey.shade300),
+                    prefixIcon: Icon(Icons.search, size: 18, color: Colors.blueGrey.shade300),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Quick Add'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                ),
               ),
             ],
           ),
@@ -262,9 +286,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   String _getViewTitle() {
     switch (_selectedIndex) {
-      case 0: return 'System Overview';
-      case 1: return 'User Directory';
-      case 2: return 'Global Expeditions';
+      case 0: return 'Dashboard';
+      case 1: return 'Users';
+      case 2: return 'Content';
+      case 3: return 'Reports';
       default: return 'Wayfarer Admin';
     }
   }
@@ -288,11 +313,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(flex: 3, child: _buildRecentUsersCard()),
+              Expanded(flex: 3, child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildUserManagementGrid(),
+                  const SizedBox(height: 32),
+                  _buildRecentUserTrips(),
+                ],
+              )),
               const SizedBox(width: 32),
-              Expanded(flex: 2, child: _buildSystemStatusCard()),
+              Expanded(flex: 2, child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildSystemStatusCard(),
+                  const SizedBox(height: 32),
+                  _buildRecentActivity(),
+                ],
+              )),
             ],
           ),
+          const SizedBox(height: 32),
+          _buildEstablishmentsTable(),
         ],
       ),
     );
@@ -301,13 +342,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildStatsGrid() {
     return Row(
       children: [
-        _buildStatCard('Total Entities', _stats['totalUsers']?.toString() ?? '0', 'Users', Icons.people_outline),
+        _buildStatCard('Active Users', _stats['totalUsers']?.toString() ?? '0', '+12%', Icons.people_outline, positive: true),
         const SizedBox(width: 24),
-        _buildStatCard('Active Flows', _stats['activeTrips']?.toString() ?? '0', 'Trips', Icons.airplanemode_active),
+        _buildStatCard('Total Trips', _stats['activeTrips']?.toString() ?? '0', '+5.4%', Icons.map_outlined, positive: true),
         const SizedBox(width: 24),
-        _buildStatCard('Documentation', _stats['totalJournalEntries']?.toString() ?? '0', 'Journals', Icons.book_outlined),
+        _buildStatCard('Revenue [MTD]', '\$412,850', '+21%', Icons.attach_money, positive: true),
         const SizedBox(width: 24),
-        _buildStatCard('Weekly Surge', _stats['newUsersThisWeek']?.toString() ?? '0', 'New Users', Icons.trending_up),
+        _buildStatCard('Server Uptime', '99.98%', 'Stable', Icons.bolt, positive: false),
       ],
     );
   }
@@ -322,7 +363,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Registered Identities', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text('User Management', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
               ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.add), label: const Text('Export CSV')),
             ],
           ),
@@ -514,7 +555,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     ) ?? false;
   }
 
-  Widget _buildStatCard(String title, String value, String subtitle, IconData icon) {
+  Widget _buildStatCard(String title, String value, String subtitle, IconData icon, {bool positive = true}) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(24),
@@ -522,21 +563,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
+                  child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: positive || subtitle.startsWith('+') ? Colors.green.withOpacity(0.1) : const Color(0xFFF1F5F9), 
+                    borderRadius: BorderRadius.circular(10)
+                  ),
+                  child: Text(subtitle, style: TextStyle(color: positive || subtitle.startsWith('+') ? Colors.green : Colors.blueGrey, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             Text(title, style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 13)),
             const SizedBox(height: 4),
-            Row(
-              children: [
-                Text(value, style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                Text(subtitle.toUpperCase(), style: const TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
-              ],
-            ),
+            Text(value, style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -564,9 +612,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
           const SizedBox(height: 20),
-          _buildNavItem(0, Icons.dashboard_outlined, 'Control Center'),
-          _buildNavItem(1, Icons.people_outline, 'Identity Manager'),
-          _buildNavItem(2, Icons.map_outlined, 'Global Expeditions'),
+          _buildNavItem(0, Icons.home_outlined, 'Dashboard'),
+          _buildNavItem(1, Icons.people_outline, 'Users'),
+          _buildNavItem(2, Icons.library_books_outlined, 'Content'),
+          _buildNavItem(3, Icons.bar_chart_outlined, 'Reports'),
           const Spacer(),
           _buildAdminProfile(),
         ],
@@ -621,28 +670,258 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildRecentUsersCard() {
+  Widget _buildUserManagementGrid() {
     return Container(
       padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFF1F5F9))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Identity Feed', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('User Management', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(border: Border.all(color: const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(8)),
+                child: Row(children: [Text('All Roles', style: GoogleFonts.inter(fontSize: 12)), const SizedBox(width: 8), const Icon(Icons.keyboard_arrow_down, size: 16)]),
+              )
+            ],
+          ),
           const SizedBox(height: 24),
-          ..._users.take(5).map((u) => Padding(
+          Row(
+            children: [
+              Expanded(flex: 2, child: Text('User', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey))),
+              Expanded(child: Text('Role', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey))),
+              Expanded(child: Text('Join Date', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey))),
+              const SizedBox(width: 100, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey))),
+            ],
+          ),
+          const Divider(height: 32),
+          ..._users.take(3).map((u) => Padding(
             padding: const EdgeInsets.only(bottom: 20),
             child: Row(
               children: [
-                CircleAvatar(radius: 16, backgroundColor: const Color(0xFFF1F5F9), child: Text(u['name'][0], style: const TextStyle(fontSize: 10, color: Color(0xFF0F172A), fontWeight: FontWeight.bold))),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(u['name'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)), Text(u['email'], style: const TextStyle(fontSize: 11, color: Colors.blueGrey))])),
-                Text(u['role'].toUpperCase(), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                Expanded(flex: 2, child: Row(
+                  children: [
+                    CircleAvatar(radius: 16, backgroundColor: const Color(0xFFF1F5F9), child: Text(u['name'][0], style: const TextStyle(fontSize: 10, color: Color(0xFF0F172A), fontWeight: FontWeight.bold))),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(u['name'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)), Text(u['email'], style: const TextStyle(fontSize: 11, color: Colors.blueGrey))])),
+                  ],
+                )),
+                Expanded(child: Container(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: u['role'] == 'admin' ? Colors.blue.withOpacity(0.1) : const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
+                    child: Text(u['role'] == 'admin' ? 'ADMIN' : 'Traveler', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: u['role'] == 'admin' ? Colors.blue : const Color(0xFF475569))),
+                  ),
+                )),
+                Expanded(child: Text(u['createdAt'].toString().substring(0, 10), style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 13))),
+                SizedBox(width: 100, child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text('Edit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey.shade700)),
+                    const SizedBox(width: 8),
+                    const Text('Suspend', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
+                    const SizedBox(width: 8),
+                    const Text('Delete', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
+                  ],
+                )),
               ],
             ),
           )),
+          const Divider(height: 32),
+          Center(child: TextButton(onPressed: () {}, child: const Text('View All Users', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))))),
         ],
       ),
+    );
+  }
+
+  Widget _buildRecentActivity() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFF1F5F9))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Recent Activity', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 24),
+          _buildActivityItem('User Marcus Thorne created trip "Amalfi Escape"', '2 minutes ago', Colors.blue),
+          _buildActivityItem('Database backup initiated automatically', '45 minutes ago', Colors.orange),
+          _buildActivityItem('System: Failed login attempt from IP 192.x.x.x', '1 hour ago', Colors.red),
+          _buildActivityItem('Sarah J. updated pricing for "Kyoto Stay"', '3 hours ago', Colors.blue),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8)),
+            child: const Center(child: Text('VIEW AUDIT LOGS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blueGrey))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityItem(String text, String time, Color dotColor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(margin: const EdgeInsets.only(top: 6, right: 12), width: 6, height: 6, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 4),
+              Text(time, style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
+            ],
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentUserTrips() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFF1F5F9))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Recent User Trips', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('Monitor and moderate latest community content', style: GoogleFonts.inter(fontSize: 12, color: Colors.blueGrey)),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(border: Border.all(color: const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(8)),
+                child: Text('Moderate All', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+              )
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: _buildSmallTripCard('Amalfi Escape', 'ITALY', 'Marcus T.', 'https://images.unsplash.com/photo-1534448552109-183610931af9?q=80&w=300')),
+              const SizedBox(width: 16),
+              Expanded(child: _buildSmallTripCard('Kyoto Temples', 'JAPAN', 'Yuki S.', 'https://images.unsplash.com/photo-1493976040372-50b510520638?q=80&w=300')),
+              const SizedBox(width: 16),
+              Expanded(child: _buildSmallTripCard('Glacier Trek', 'ICELAND', 'Ben J.', 'https://images.unsplash.com/photo-1548186178-577e384eb1eb?q=80&w=300')),
+              const SizedBox(width: 16),
+              Expanded(child: _buildSmallTripCard('Sahara Sands', 'MOROCCO', 'Sarah L.', 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=300')),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmallTripCard(String title, String subtitle, String by, String image) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFF1F5F9))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Image.network(image, height: 80, width: double.infinity, fit: BoxFit.cover),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(subtitle, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                const SizedBox(height: 2),
+                Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('By $by', style: const TextStyle(fontSize: 10, color: Colors.blueGrey)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstablishmentsTable() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFF1F5F9))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  _buildTab('Dining', true),
+                  const SizedBox(width: 24),
+                  _buildTab('Accommodations', false),
+                  const SizedBox(width: 24),
+                  _buildTab('Transport', false),
+                ],
+              ),
+              ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.add, size: 14),
+                label: const Text('Add New Entry'),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+              ),
+            ],
+          ),
+          const Divider(height: 32),
+          Row(
+            children: [
+              Expanded(flex: 2, child: Text('Establishment', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold))),
+              Expanded(child: Text('Category', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold))),
+              Expanded(child: Text('Location', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold))),
+              Expanded(child: Text('Rating', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold))),
+              const SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          const Divider(height: 32),
+          _buildEstRow('The Golden Noodle', 'Casual Dining', 'Tokyo, JP', '4.8'),
+          const Divider(height: 32, color: Color(0xFFF1F5F9)),
+          _buildEstRow('Le Petit Bistro', 'Fine Dining', 'Paris, FR', '4.5'),
+          const Divider(height: 32),
+          Center(child: TextButton(onPressed: () {}, child: const Text('View All Dining Entries', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstRow(String name, String cat, String loc, String rating) {
+    return Row(
+      children: [
+        Expanded(flex: 2, child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+        Expanded(child: Text(cat, style: const TextStyle(color: Colors.blueGrey, fontSize: 13))),
+        Expanded(child: Text(loc, style: const TextStyle(color: Colors.blueGrey, fontSize: 13))),
+        Expanded(child: Row(children: [const Icon(Icons.star, color: Colors.amber, size: 14), const SizedBox(width: 4), Text(rating, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))])),
+        SizedBox(width: 80, child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: const [
+            Icon(Icons.edit_outlined, size: 16, color: Colors.blueGrey),
+            SizedBox(width: 12),
+            Icon(Icons.delete_outline, size: 16, color: Colors.blueGrey),
+          ],
+        )),
+      ],
+    );
+  }
+
+  Widget _buildTab(String label, bool active) {
+    return Container(
+      padding: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: active ? const Color(0xFF0F172A) : Colors.transparent, width: 2))),
+      child: Text(label, style: TextStyle(fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? const Color(0xFF0F172A) : Colors.blueGrey)),
     );
   }
 
