@@ -46,6 +46,7 @@ class _TripListScreenState extends State<TripListScreen> {
     return Scaffold(
       backgroundColor: AppTheme.lightBg,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Text('My Trips', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(

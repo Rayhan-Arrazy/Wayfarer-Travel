@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../config/routes.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/trip_provider.dart';
+import '../guide/guide_list_screen.dart';
+import '../map/map_screen.dart';
+import '../trip_planner/trip_list_screen.dart';
+import '../journal/journal_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,25 +22,36 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
+  
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().init();
       context.read<TripProvider>().fetchTrips();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final tripProvider = context.watch<TripProvider>();
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FA),
       drawer: _buildDrawer(),
-      body: tripProvider.isLoading 
-        ? const Center(child: CircularProgressIndicator()) 
-        : _buildBody(),
+      body: _buildBody(),
       bottomNavigationBar: _buildBottomNav(),
+      floatingActionButton: _currentIndex == 0
+          ? FloatingActionButton(
+              onPressed: () async {
+                await Navigator.pushNamed(context, AppRoutes.createTrip);
+                if (mounted) context.read<TripProvider>().fetchTrips();
+              },
+              backgroundColor: const Color(0xFFF97316),
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: const Icon(Icons.add, color: Colors.white, size: 28),
+            )
+          : null,
     );
   }
 
@@ -48,40 +64,59 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Container(
             padding: const EdgeInsets.fromLTRB(24, 80, 24, 40),
-            color: AppTheme.primaryColor,
+            decoration: const BoxDecoration(
+              gradient: AppTheme.primaryGradient,
+            ),
             width: double.infinity,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const CircleAvatar(
-                  radius: 36,
-                  backgroundColor: Colors.white24,
-                  child: Icon(Icons.person, color: Colors.white, size: 40),
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      (auth.user?.name ?? 'U')[0].toUpperCase(),
+                      style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                Text(auth.user?.name ?? 'Alex Rivera', 
-                  style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-                Text(auth.user?.email ?? 'alex@example.com', 
-                  style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)),
+                Text(auth.user?.name ?? 'Traveler',
+                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(auth.user?.email ?? '',
+                    style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)),
+                if (auth.isAdmin) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+                    child: Text('Admin', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ],
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          _buildDrawerItem(Icons.home_outlined, 'Home', () => Navigator.pop(context)),
-          _buildDrawerItem(Icons.map_outlined, 'Navigation', () => Navigator.pushNamed(context, AppRoutes.map)),
-          _buildDrawerItem(Icons.restaurant_outlined, 'Dining & Food', () => Navigator.pushNamed(context, AppRoutes.food)),
-          _buildDrawerItem(Icons.hotel_outlined, 'Accommodation', () => Navigator.pushNamed(context, AppRoutes.accommodation)),
-          _buildDrawerItem(Icons.currency_exchange_outlined, 'Currency Converter', () => Navigator.pushNamed(context, AppRoutes.currency)),
-          _buildDrawerItem(Icons.cloud_outlined, 'Weather Forecast', () => Navigator.pushNamed(context, AppRoutes.weather)),
-          _buildDrawerItem(Icons.book_outlined, 'Travel Journal', () => Navigator.pushNamed(context, AppRoutes.journal)),
-          const Divider(indent: 24, endIndent: 24, height: 40),
-          _buildDrawerItem(Icons.emergency_outlined, 'Emergency SOS', () => Navigator.pushNamed(context, AppRoutes.emergency), color: AppTheme.errorColor),
-          _buildDrawerItem(Icons.logout, 'Sign Out', () => auth.logout(), color: AppTheme.textMuted),
-          const Spacer(),
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Text('Wayfarer v1.0.0', style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textMuted)),
-          ),
+          const SizedBox(height: 8),
+          _buildDrawerItem(Icons.person_outline, 'Profile', () {
+            Navigator.pop(context);
+            Navigator.pushNamed(context, AppRoutes.profile);
+          }),
+          _buildDrawerItem(Icons.favorite_border, 'Favorites', () {
+            Navigator.pop(context);
+          }),
+          _buildDrawerItem(Icons.settings_outlined, 'Settings', () {
+            Navigator.pop(context);
+          }),
+          const Divider(height: 32),
+          _buildDrawerItem(Icons.logout, 'Sign Out', () {
+            auth.logout();
+            Navigator.pushReplacementNamed(context, AppRoutes.login);
+          }, color: AppTheme.errorColor),
         ],
       ),
     );
@@ -92,7 +127,6 @@ class _HomeScreenState extends State<HomeScreen> {
       leading: Icon(icon, color: color ?? AppTheme.textPrimary, size: 22),
       title: Text(label, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: color ?? AppTheme.textPrimary)),
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
     );
   }
 
@@ -101,354 +135,276 @@ class _HomeScreenState extends State<HomeScreen> {
       case 0:
         return _buildHomePage();
       case 1:
-        return _buildExplorePage();
+        return const TripListScreen();
       case 2:
-        return _buildTripsPage();
+        return const MapScreen();
       case 3:
-        return _buildProfilePage();
+        return const JournalScreen();
+      case 4:
+        return _buildExplorePage();
       default:
         return _buildHomePage();
     }
   }
 
   Widget _buildHomePage() {
+    final auth = context.watch<AuthProvider>();
     final tripProvider = context.watch<TripProvider>();
+    final upcomingTrip = tripProvider.upcomingTrip;
+    final userName = auth.user?.name.split(' ').first ?? 'Traveler';
+
     return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          // Premium Top Bar
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                        child: const Icon(Icons.menu, color: AppTheme.textPrimary, size: 28),
-                      ),
-                      const SizedBox(width: 16),
-                      Text('Wayfarer',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.5,
-                          color: AppTheme.textPrimary,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          await context.read<TripProvider>().fetchTrips();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                          child: const Icon(Icons.menu, color: AppTheme.primaryColor, size: 26),
                         ),
-                      ),
-                    ],
-                  ),
-                  const CircleAvatar(
-                    radius: 18,
-                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=user123'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Welcome Header
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('WELCOME BACK!', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.textMuted)),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Ready for your next\njourney?',
-                    style: GoogleFonts.outfit(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      height: 1.1,
-                      letterSpacing: -0.5,
-                      color: AppTheme.textPrimary,
+                        const SizedBox(width: 16),
+                        Text('Wayfarer',
+                          style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.primaryColor),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Main Journey Card
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: tripProvider.upcomingTrip == null 
-                ? _buildNoTripCard() 
-                : Container(
-                  height: 180,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.15), blurRadius: 30, offset: const Offset(0, 15))
-                    ],
-                  ),
-                  child: Stack(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(6)),
-                              child: const Text('UPCOMING TRIP', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(tripProvider.upcomingTrip!.destination, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${tripProvider.upcomingTrip!.startDate.toString().substring(0, 10)} - ${tripProvider.upcomingTrip!.endDate.toString().substring(0, 10)}', 
-                              style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)
-                            ),
-                          ],
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.primaryGradient,
+                          shape: BoxShape.circle,
                         ),
-                      ),
-                      Positioned(
-                        right: 20,
-                        top: 20,
-                        bottom: 20,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: CachedNetworkImage(
-                            imageUrl: tripProvider.upcomingTrip!.coverImage.isNotEmpty 
-                                ? tripProvider.upcomingTrip!.coverImage 
-                                : 'https://images.unsplash.com/photo-1493976040372-50b510520638?q=80&w=400',
-                            width: 140,
-                            fit: BoxFit.cover,
+                        child: Center(
+                          child: Text(
+                            userName[0].toUpperCase(),
+                            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
                           ),
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Welcome Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('WELCOME BACK', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: const Color(0xFF64748B))),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Hey $userName! 👋\nReady for adventure?',
+                      style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w700, height: 1.2, letterSpacing: -0.5, color: AppTheme.primaryColor),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Upcoming Trip Card
+              if (upcomingTrip != null)
+                _buildUpcomingTripCard(upcomingTrip)
+              else
+                _buildNoTripCard(),
+
+              const SizedBox(height: 16),
+
+              // Quick Stats Cards
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pushNamed(context, AppRoutes.currency),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)]),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(color: const Color(0xFFDBEAFE), borderRadius: BorderRadius.circular(8)),
+                                    child: const Icon(Icons.sync_alt, color: Color(0xFF3B82F6), size: 16),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('EXCHANGE', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text('1 ${auth.user?.homeCurrency ?? "USD"}', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 2),
+                              Text('Tap to convert', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pushNamed(context, AppRoutes.emergency),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: const Color(0xFFFFE4E6), borderRadius: BorderRadius.circular(16)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(color: const Color(0xFFE11D48), borderRadius: BorderRadius.circular(8)),
+                                    child: const Icon(Icons.local_hospital, color: Colors.white, size: 16),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('EMERGENCY', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text('Safety Hub', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.primaryColor, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 2),
+                              Text('SOS & Help', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Trip Summary
+              if (tripProvider.trips.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Your Trips', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+                      GestureDetector(
+                        onTap: () => setState(() => _currentIndex = 1),
+                        child: Text('See All', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFFF97316))),
                       ),
                     ],
                   ),
                 ),
-            ),
-          ),
-
-          // SOS and Exchange Rates
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  _buildStatButton(
-                    icon: Icons.currency_exchange,
-                    label: 'EXCHANGE RATE',
-                    value: '145.20 JPY',
-                    color: const Color(0xFFF1F5F9),
-                    onTap: () => Navigator.pushNamed(context, AppRoutes.currency),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 130,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    clipBehavior: Clip.none,
+                    itemCount: tripProvider.trips.length.clamp(0, 5),
+                    itemBuilder: (ctx, i) {
+                      final trip = tripProvider.trips[i];
+                      final coverImg = trip.coverImage.isNotEmpty
+                          ? trip.coverImage
+                          : 'https://images.unsplash.com/photo-1488646953014-85cb44e25828';
+                      return GestureDetector(
+                        onTap: () async {
+                          await Navigator.pushNamed(context, AppRoutes.tripDetail, arguments: trip.id);
+                          if (mounted) context.read<TripProvider>().fetchTrips();
+                        },
+                        child: Container(
+                          width: 180,
+                          margin: const EdgeInsets.only(right: 14),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            image: DecorationImage(
+                              image: CachedNetworkImageProvider('$coverImg?w=400&q=80'),
+                              fit: BoxFit.cover,
+                            ),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 4))],
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: trip.isActive
+                                        ? AppTheme.successColor
+                                        : trip.isCompleted
+                                            ? Colors.white24
+                                            : const Color(0xFFF97316),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    trip.status.toUpperCase(),
+                                    style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.5),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(trip.destination, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                Text(
+                                  '${DateFormat('MMM dd').format(trip.startDate)} - ${DateFormat('MMM dd').format(trip.endDate)}',
+                                  style: GoogleFonts.inter(fontSize: 10, color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(width: 12),
-                  _buildStatButton(
-                    icon: Icons.emergency_outlined,
-                    label: 'EMERGENCY',
-                    value: 'Dial 119',
-                    color: const Color(0xFFFEF2F2),
-                    textColor: AppTheme.errorColor,
-                    onTap: () => Navigator.pushNamed(context, AppRoutes.emergency),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
-
-          // Items to Pack Section
-          _buildHorizontalSectionHeader('Items to Pack', '1/12 COMPLETED'),
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 140,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                children: [
-                  _buildChecklistCard('Passport & Visa', Icons.badge_outlined, true),
-                  _buildChecklistCard('Power Adapter', Icons.power_outlined, false),
-                  _buildChecklistCard('Cash (JPY)', Icons.payments_outlined, false),
-                  _buildChecklistCard('Winter Coat', Icons.checkroom_outlined, false),
-                ],
-              ),
-            ),
-          ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-          // Check for Departure Section
-          _buildHorizontalSectionHeader('Check for Departure', '0/4 DONE'),
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 140,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                children: [
-                  _buildChecklistCard('Vaccination', Icons.vaccines_outlined, false, category: 'HEALTH'),
-                  _buildChecklistCard('Insurance', Icons.verified_user_outlined, false, category: 'ADMIN'),
-                  _buildChecklistCard('Flight Checkin', Icons.flight_land, false, category: 'TRANSPORT'),
-                ],
-              ),
-            ),
-          ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
-
-          // Health Essentials
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text('Health Essentials', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700)),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 120,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                children: [
-                  _buildHealthCard(Icons.wb_sunny_outlined, 'UV INDEX', 'Moderate'),
-                  _buildHealthCard(Icons.air, 'AIR QUALITY', 'Good (42)'),
-                  _buildHealthCard(Icons.health_and_safety_outlined, 'VACCINE', 'Required'),
-                ],
-              ),
-            ),
-          ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHorizontalSectionHeader(String title, String status) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700)),
-            Text(status, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.primaryColor, letterSpacing: 0.5)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChecklistCard(String title, IconData icon, bool isChecked, {String? category}) {
-    return Container(
-      width: 140,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isChecked ? AppTheme.primaryColor.withValues(alpha: 0.05) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isChecked ? AppTheme.primaryColor.withValues(alpha: 0.2) : const Color(0xFFF1F5F9)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, size: 20, color: isChecked ? AppTheme.primaryColor : AppTheme.textSecondary),
-              if (isChecked) const Icon(Icons.check_circle, size: 16, color: AppTheme.successColor),
-            ],
-          ),
-          const Spacer(),
-          if (category != null) 
-            Text(category, style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w900, color: AppTheme.textMuted)),
-          const SizedBox(height: 4),
-          Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary, height: 1.2)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatButton({required IconData icon, required String label, required String value, required Color color, Color? textColor, required VoidCallback onTap}) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(16)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 18, color: textColor ?? AppTheme.textSecondary),
-              const SizedBox(height: 8),
-              Text(label, style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w800, color: AppTheme.textMuted)),
-              const SizedBox(height: 2),
-              Text(value, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: textColor ?? AppTheme.textPrimary)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHealthCard(IconData icon, String label, String value) {
-    return Container(
-      width: 130,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, size: 18, color: AppTheme.textSecondary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(label, style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w800, color: AppTheme.textMuted)),
-                Text(value, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildExplorePage() {
-    return Container(
-      color: Colors.white,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Explore', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-              const SizedBox(height: 8),
-              Text('Discover everything for your trip', style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary)),
               const SizedBox(height: 24),
-              Expanded(
-                child: ListView(
+
+              // Quick Feature Grid
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text('Quick Access', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
                   children: [
-                    _buildExploreItem(Icons.map_outlined, 'Navigation', 'Live maps & directions', AppRoutes.map, Colors.blue),
-                    _buildExploreItem(Icons.restaurant_outlined, 'Dining', 'Best local eateries', AppRoutes.food, Colors.orange),
-                    _buildExploreItem(Icons.hotel_outlined, 'Stays', 'Hotels & apartments', AppRoutes.accommodation, Colors.purple),
-                    _buildExploreItem(Icons.currency_exchange_outlined, 'Finance', 'Rates & Budget', AppRoutes.currency, Colors.green),
-                    _buildExploreItem(Icons.cloud_outlined, 'Weather', 'Live forecast & Air', AppRoutes.weather, Colors.lightBlue),
+                    _buildQuickFeature(Icons.restaurant, 'Food', AppRoutes.food, const Color(0xFF9333EA)),
+                    const SizedBox(width: 12),
+                    _buildQuickFeature(Icons.cloud, 'Weather', AppRoutes.weather, const Color(0xFF0EA5E9)),
+                    const SizedBox(width: 12),
+                    _buildQuickFeature(Icons.hotel, 'Stay', AppRoutes.accommodation, const Color(0xFFD97706)),
+                    const SizedBox(width: 12),
+                    _buildQuickFeature(Icons.directions_car, 'Transport', AppRoutes.transport, const Color(0xFF16A34A)),
                   ],
                 ),
               ),
@@ -459,33 +415,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildExploreItem(IconData icon, String title, String subtitle, String route, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: ListTile(
-        onTap: () => Navigator.pushNamed(context, route),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16)),
-        subtitle: Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
-        trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
-      ),
-    );
-  }
+  Widget _buildUpcomingTripCard(dynamic trip) {
+    final coverImg = trip.coverImage.isNotEmpty
+        ? trip.coverImage
+        : 'https://images.unsplash.com/photo-1488646953014-85cb44e25828';
+    final daysUntil = trip.startDate.difference(DateTime.now()).inDays;
 
-  Widget _buildTripsPage() {
-    return Container(
-      color: Colors.white,
-      child: SafeArea(
-        child: Padding(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GestureDetector(
+        onTap: () async {
+          await Navigator.pushNamed(context, AppRoutes.tripDetail, arguments: trip.id);
+          if (mounted) context.read<TripProvider>().fetchTrips();
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF233C5B),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: const Color(0xFF233C5B).withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 10))],
+          ),
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -493,141 +441,264 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('My Trips', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-                  ElevatedButton.icon(
-                    onPressed: () => Navigator.pushNamed(context, AppRoutes.createTrip),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('New'),
-                    style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: trip.isActive ? AppTheme.successColor : const Color(0xFFF97316),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      trip.isActive ? 'ACTIVE NOW' : (daysUntil > 0 ? '$daysUntil DAYS LEFT' : 'UPCOMING'),
+                      style: GoogleFonts.inter(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.people, color: Colors.white, size: 14),
+                            const SizedBox(width: 4),
+                            Text('${trip.partySize}', style: GoogleFonts.inter(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              _buildTripListCard('Kyoto Adventure', 'Oct 12 - 20, 2024', 'Japan', 'https://images.unsplash.com/photo-1493976040372-50b510520638?q=80&w=400'),
-              _buildTripListCard('Paris Escape', 'Dec 15 - 22, 2023', 'France', 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=400'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTripListCard(String title, String date, String country, String imageUrl) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      height: 120,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
-            child: CachedNetworkImage(imageUrl: imageUrl, width: 120, height: 120, fit: BoxFit.cover),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(country.toUpperCase(), style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.accentColor, letterSpacing: 1)),
-                  const SizedBox(height: 4),
-                  Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700)),
-                  Text(date, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
-                ],
+              const SizedBox(height: 14),
+              Text(trip.destination, style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 4),
+              Text(
+                '${DateFormat('MMM dd').format(trip.startDate)} - ${DateFormat('MMM dd, yyyy').format(trip.endDate)}',
+                style: GoogleFonts.inter(fontSize: 13, color: Colors.white70),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfilePage() {
-    final auth = context.watch<AuthProvider>();
-    return Container(
-      color: Colors.white,
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const CircleAvatar(radius: 50, backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=user123')),
               const SizedBox(height: 16),
-              Text(auth.user?.name ?? 'Alex Rivera', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800)),
-              Text(auth.user?.email ?? 'alex.rivera@example.com', style: GoogleFonts.inter(color: AppTheme.textMuted)),
-              const SizedBox(height: 32),
-              _buildProfileOption(Icons.person_outline, 'Personal Info'),
-              _buildProfileOption(Icons.history, 'Trip History'),
-              _buildProfileOption(Icons.favorite_border, 'Favorites'),
-              _buildProfileOption(Icons.settings_outlined, 'Settings'),
-              const Divider(height: 40),
-              _buildProfileOption(Icons.logout, 'Sign Out', color: AppTheme.errorColor, onTap: () => auth.logout()),
+
+              // Cover image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: CachedNetworkImage(
+                  imageUrl: '$coverImg?w=800&q=80',
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(height: 150, color: Colors.grey.shade800),
+                  errorWidget: (_, __, ___) => Container(height: 150, color: Colors.grey.shade800, child: const Icon(Icons.image, color: Colors.white24, size: 40)),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Checklist progress
+              if (trip.checklist.isNotEmpty) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Checklist', style: GoogleFonts.inter(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600)),
+                    Text('${trip.checklistProgress}%', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFFF97316), fontWeight: FontWeight.w700)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: trip.checklistProgress / 100,
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
+                    color: const Color(0xFFF97316),
+                    minHeight: 5,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildProfileOption(IconData icon, String title, {Color? color, VoidCallback? onTap}) {
-    return ListTile(
-      onTap: onTap,
-      leading: Icon(icon, color: color ?? AppTheme.textPrimary),
-      title: Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: color ?? AppTheme.textPrimary)),
-      trailing: const Icon(Icons.chevron_right, size: 20),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF1F5F9)))),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: AppTheme.primaryColor,
-        unselectedItemColor: AppTheme.textMuted,
-        selectedLabelStyle: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: GoogleFonts.inter(fontSize: 10),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home_filled), label: 'HOME'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), activeIcon: Icon(Icons.explore), label: 'EXPLORE'),
-          BottomNavigationBarItem(icon: Icon(Icons.flight_outlined), activeIcon: Icon(Icons.flight), label: 'TRIPS'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'PROFILE'),
-        ],
       ),
     );
   }
 
   Widget _buildNoTripCard() {
-    return Container(
-      height: 180,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.flight_takeoff, color: AppTheme.textMuted, size: 40),
-          const SizedBox(height: 12),
-          Text('No upcoming trips', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-          const SizedBox(height: 4),
-          Text('Plan your next adventure now', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.createTrip),
-            child: const Text('Create Trip'),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GestureDetector(
+        onTap: () => Navigator.pushNamed(context, AppRoutes.createTrip),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: AppTheme.primaryGradient,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 10))],
           ),
-        ],
+          child: Column(
+            children: [
+              const Icon(Icons.flight_takeoff, color: Colors.white, size: 48),
+              const SizedBox(height: 16),
+              Text('Plan Your First Trip', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
+              const SizedBox(height: 8),
+              Text('Tap here to start planning your next adventure', style: GoogleFonts.inter(fontSize: 14, color: Colors.white70, height: 1.4), textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                child: Text('Get Started', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickFeature(IconData icon, String label, String route, Color color) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => Navigator.pushNamed(context, route),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFF1F5F9)),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6)],
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(height: 8),
+              Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExplorePage() {
+    return Container(
+      color: const Color(0xFFF8F9FA),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Explore', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
+                  const SizedBox(height: 4),
+                  Text('Discover tools for your journey', style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: [
+                  _buildExploreSection('Travel Planning'),
+                  _buildExploreItem(Icons.public, 'Country Guides', 'Comprehensive handbook for every nation',
+                      () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuideListScreen())), Colors.indigo),
+                  _buildExploreItem(Icons.luggage, 'Trip Planner', 'Plan itineraries & manage checklists',
+                      () => setState(() => _currentIndex = 1), const Color(0xFFF97316)),
+                  _buildExploreItem(Icons.map, 'Interactive Map', 'Explore nearby places & points of interest',
+                      () => setState(() => _currentIndex = 2), const Color(0xFF0EA5E9)),
+
+                  const SizedBox(height: 20),
+                  _buildExploreSection('Services'),
+                  _buildExploreItem(Icons.currency_exchange, 'Currency & Finance', 'Live exchange rates & budget tools',
+                      () => Navigator.pushNamed(context, AppRoutes.currency), const Color(0xFF16A34A)),
+                  _buildExploreItem(Icons.cloud, 'Weather', 'Live forecast, UV index & air quality',
+                      () => Navigator.pushNamed(context, AppRoutes.weather), const Color(0xFF0284C7)),
+                  _buildExploreItem(Icons.restaurant, 'Food & Dining', 'Find restaurants & local cuisine',
+                      () => Navigator.pushNamed(context, AppRoutes.food), const Color(0xFF9333EA)),
+                  _buildExploreItem(Icons.hotel, 'Accommodation', 'Hotels, hostels & apartments',
+                      () => Navigator.pushNamed(context, AppRoutes.accommodation), const Color(0xFFD97706)),
+                  _buildExploreItem(Icons.directions_car, 'Transport', 'Routes, flights & transit stops',
+                      () => Navigator.pushNamed(context, AppRoutes.transport), const Color(0xFF059669)),
+
+                  const SizedBox(height: 20),
+                  _buildExploreSection('Safety & Personal'),
+                  _buildExploreItem(Icons.sos, 'Emergency Services', 'SOS, hospitals & emergency numbers',
+                      () => Navigator.pushNamed(context, AppRoutes.emergency), const Color(0xFFDC2626)),
+                  _buildExploreItem(Icons.edit_note, 'Travel Journal', 'Document your journey memories',
+                      () => setState(() => _currentIndex = 3), const Color(0xFF7C3AED)),
+                  _buildExploreItem(Icons.person, 'Profile', 'Manage account & emergency contacts',
+                      () => Navigator.pushNamed(context, AppRoutes.profile), const Color(0xFF64748B)),
+
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExploreSection(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(title, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF94A3B8), letterSpacing: 1.0)),
+    );
+  }
+
+  Widget _buildExploreItem(IconData icon, String title, String subtitle, VoidCallback onTap, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4)],
+      ),
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: color, size: 22),
+        ),
+        title: Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.primaryColor)),
+        subtitle: Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
+        trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted, size: 20),
+      ),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+        color: Colors.white,
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -4))],
+      ),
+      child: SafeArea(
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (i) => setState(() => _currentIndex = i),
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          selectedItemColor: AppTheme.primaryColor,
+          unselectedItemColor: const Color(0xFF94A3B8),
+          selectedLabelStyle: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold),
+          unselectedLabelStyle: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home_filled), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.luggage_outlined), activeIcon: Icon(Icons.luggage), label: 'Trips'),
+            BottomNavigationBarItem(icon: Icon(Icons.map_outlined), activeIcon: Icon(Icons.map), label: 'Map'),
+            BottomNavigationBarItem(icon: Icon(Icons.edit_note_outlined), activeIcon: Icon(Icons.edit_note), label: 'Journal'),
+            BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), activeIcon: Icon(Icons.explore), label: 'Explore'),
+          ],
+        ),
       ),
     );
   }

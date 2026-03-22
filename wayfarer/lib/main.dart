@@ -5,7 +5,6 @@ import 'config/theme.dart';
 import 'config/routes.dart';
 import 'providers/auth_provider.dart';
 import 'providers/trip_provider.dart';
-import 'screens/home/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,13 +28,17 @@ class WayfarerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
         ChangeNotifierProvider(create: (_) => TripProvider()),
       ],
-      child: MaterialApp(
-        title: 'Wayfarer',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        routes: AppRoutes.routes,
-        onGenerateRoute: AppRoutes.onGenerateRoute,
-        home: const HomeScreen(),
+      child: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
+          return MaterialApp(
+            title: 'Wayfarer',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            routes: AppRoutes.routes,
+            onGenerateRoute: AppRoutes.onGenerateRoute,
+            initialRoute: auth.isAuthenticated ? AppRoutes.home : AppRoutes.login,
+          );
+        },
       ),
     );
   }

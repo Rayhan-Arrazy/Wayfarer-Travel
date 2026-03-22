@@ -1,6 +1,6 @@
 const express = require('express');
 const auth = require('../../middleware/auth');
-const { axiosGet, callWithFallback, getCached, setCache } = require('../../utils/apiHelpers');
+const { axiosGet, callWithFallback, getCached, setCache, getUnsplashImage } = require('../../utils/apiHelpers');
 const router = express.Router();
 
 // @route   GET /api/proxy/food/restaurants

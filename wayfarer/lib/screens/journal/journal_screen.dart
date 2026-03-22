@@ -105,12 +105,16 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 
   Widget _buildTopBar(BuildContext context) {
+    final canPop = Navigator.canPop(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back)),
+          if (canPop)
+            IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back))
+          else
+            const SizedBox(width: 48),
           const Icon(Icons.search, size: 24),
         ],
       ),
