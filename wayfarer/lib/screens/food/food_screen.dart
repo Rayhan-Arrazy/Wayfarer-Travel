@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
 import '../../config/theme.dart';
-import '../../services/api_service.dart';
 
 class FoodScreen extends StatefulWidget {
   const FoodScreen({super.key});
@@ -13,225 +11,254 @@ class FoodScreen extends StatefulWidget {
 }
 
 class _FoodScreenState extends State<FoodScreen> {
-  final ApiService _api = ApiService();
   final _searchController = TextEditingController();
-  
-  List<dynamic> _restaurants = [];
-  bool _isLoading = true;
-  String _activeCategory = 'Restaurants';
-  
-  // Default to Tokyo coordinates for demo
-  double _lat = 35.6762;
-  double _lng = 139.6503;
 
   @override
-  void initState() {
-    super.initState();
-    _fetchRestaurants();
-  }
-
-  Future<void> _fetchRestaurants() async {
-    setState(() => _isLoading = true);
-    try {
-      final response = await _api.searchRestaurants(_lat, _lng);
-      setState(() {
-        _restaurants = response.data['restaurants'] ?? [];
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _fetchRestaurants,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(context),
-                if (_isLoading)
-                  ...List.generate(3, (i) => _buildSkeleton())
-                else if (_restaurants.isEmpty)
-                  _buildEmptyState()
-                else
-                  ..._restaurants.map((res) => _buildRestaurantCard(res)).toList(),
-                const SizedBox(height: 40),
-              ],
-            ),
-          ),
-        ),
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        title: Text('Wayfarer', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppTheme.primaryColor),
+        actions: [
+          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+        ],
       ),
-    );
-  }
-
-  Widget _buildSkeleton() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade100,
-      highlightColor: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      // Adding bottom navigation block from prototype is complex since this is pushed via route.
+      // Assuming parent Scaffold or similar has the bottom nav, we just render body.
+      // But we need the floating action button layout. 
+      // Actually prototype has a bottom nav bar. I will just render the body here.
+      // But let's add the floating FAB shown in prototype.
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        backgroundColor: const Color(0xFF1E2E46),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(height: 24, width: 200, color: Colors.white),
+            // Search Bar
+            Container(
+              height: 54,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.lightBorder)),
+              child: Row(
+                children: [
+                  const SizedBox(width: 16),
+                  const Icon(Icons.search, color: AppTheme.textSecondary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 16),
+                      decoration: InputDecoration(
+                        hintText: 'Search cuisines or restaurants...',
+                        hintStyle: GoogleFonts.inter(color: AppTheme.textMuted),
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                  const Padding(padding: EdgeInsets.all(16), child: Icon(Icons.tune, color: AppTheme.textSecondary)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Smart Translator Hero Card
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E2E46),
+                borderRadius: BorderRadius.circular(16),
+                image: DecorationImage(
+                  image: const CachedNetworkImageProvider('https://images.unsplash.com/photo-1544148103-0773bf10d330?w=800&q=80'), // Dark menu bg
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(const Color(0xFF1E2E46).withValues(alpha: 0.8), BlendMode.srcOver),
+                ),
+              ),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('SMART TRANSLATOR', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFFF97316), letterSpacing: 1.0)),
+                  const SizedBox(height: 8),
+                  Text('Menu Lens', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const SizedBox(height: 8),
+                  Text('Instantly translate and explain local dishes\nusing your camera.', style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: Colors.white70)),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                    label: Text('Open Scanner', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF97316),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                    ),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Local Cuisine Guide Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('FLAVOR PROFILES', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textSecondary, letterSpacing: 1.0)),
+                    const SizedBox(height: 4),
+                    Text('Local Cuisine Guide', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                  ],
+                ),
+                Text('See all', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.primaryColor)),
+              ],
+            ),
             const SizedBox(height: 16),
-            Container(height: 220, width: double.infinity, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24))),
+            
+            // Large Cuisine Card
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                height: 160, width: double.infinity,
+                decoration: BoxDecoration(
+                  image: const DecorationImage(
+                    image: CachedNetworkImageProvider('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80'), // Food plate
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)]),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('The Signature Roast', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text('Must-try heritage dish', style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
-            Container(height: 14, width: 150, color: Colors.white),
+            
+            // Smaller Cuisine Cards row
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.lightBorder)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.coffee, color: Color(0xFFF97316), size: 24),
+                        const SizedBox(height: 24),
+                        Text('Brew Culture', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                        Text('Local café guide', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.lightBorder)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.bakery_dining, color: Color(0xFFF97316), size: 24),
+                        const SizedBox(height: 24),
+                        Text('Pastry Trails', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                        Text('Sweet specialties', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+
+            // Nearby Landmarks (which usually means restaurants near landmarks in this context)
+            Text('AROUND YOU', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textSecondary, letterSpacing: 1.0)),
+            const SizedBox(height: 4),
+            Text('Nearby Landmarks', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+            const SizedBox(height: 16),
+
+            // Landmark Item 1
+            _buildLandmarkItem('The Clock Tower', '250m away', ['Historic', 'Photo Spot'], 'https://images.unsplash.com/photo-1548625361-ec23a7e37dfc?w=150&q=80'),
+            const SizedBox(height: 12),
+            
+            // Landmark Item 2
+            _buildLandmarkItem('Central Market', '600m away', ['Dining', 'Shopping'], 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=150&q=80'),
+            
+            const SizedBox(height: 100), // padding for bottom nav / FAB
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
+  Widget _buildLandmarkItem(String name, String distance, List<String> tags, String imageUrl) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.lightBorder)),
+      child: Row(
         children: [
-          const SizedBox(height: 60),
-          const Icon(Icons.restaurant_menu, size: 64, color: AppTheme.textMuted),
-          const SizedBox(height: 16),
-          Text('No restaurants found near here', style: GoogleFonts.inter(color: AppTheme.textMuted)),
-          TextButton(onPressed: _fetchRestaurants, child: const Text('Try Again'))
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRestaurantCard(dynamic res) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: CachedNetworkImage(imageUrl: imageUrl, width: 70, height: 70, fit: BoxFit.cover),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+                const SizedBox(height: 4),
+                Row(
                   children: [
-                    Text(res['name'] ?? 'Local Eatery', 
-                      style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.orange, size: 16),
-                        const SizedBox(width: 4),
-                        Text(res['rating']?.toString() ?? '4.5', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14)),
-                        const SizedBox(width: 4),
-                        Text('(${res['reviews'] ?? '80'} reviews)', style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 13)),
-                        const SizedBox(width: 8),
-                        Text('•', style: TextStyle(color: Colors.grey.shade300)),
-                        const SizedBox(width: 8),
-                        Text(res['cuisine'] ?? 'Local', style: GoogleFonts.inter(color: AppTheme.accentColor, fontSize: 13, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
+                    const Icon(Icons.near_me, size: 12, color: AppTheme.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(distance, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
                   ],
                 ),
-              ),
-              IconButton(onPressed: () {}, icon: const Icon(Icons.favorite_border, color: AppTheme.textMuted)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: CachedNetworkImage(
-              imageUrl: res['imageUrl'] ?? 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624',
-              height: 220,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: Colors.grey.shade100, child: const Icon(Icons.image, color: Colors.white)),
-              errorWidget: (context, url, error) => const Icon(Icons.error),
+                const SizedBox(height: 8),
+                Row(
+                  children: tags.map((t) => Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
+                    child: Text(t, style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary)),
+                  )).toList(),
+                )
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              const Icon(Icons.location_on_outlined, size: 16, color: AppTheme.textMuted),
-              const SizedBox(width: 4),
-              Expanded(child: Text(res['address'] ?? 'Nearby your location', style: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 13))),
-              Text(res['openingHours'] ?? '9 AM - 10 PM', style: GoogleFonts.inter(color: Colors.green, fontSize: 13, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const Divider(height: 32, thickness: 1),
+          const Icon(Icons.chevron_right, color: AppTheme.textMuted),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Row(
-            children: [
-              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back)),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0))),
-                  child: TextField(
-                    controller: _searchController,
-                    onSubmitted: (val) {
-                      // Perform search logic here
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Search in Tokyo...',
-                      hintStyle: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 14),
-                      icon: const Icon(Icons.search, size: 20, color: AppTheme.textMuted),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 44,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            children: [
-              _buildFilterChip('Restaurants', true),
-              _buildFilterChip('Cafe', false),
-              _buildFilterChip('Halal', false),
-              _buildFilterChip('Bakery', false),
-              _buildFilterChip('Bars', false),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-
-  Widget _buildFilterChip(String label, bool isSelected) {
-    bool active = _activeCategory == label;
-    return GestureDetector(
-      onTap: () => setState(() => _activeCategory = label),
-      child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        decoration: BoxDecoration(
-          color: active ? AppTheme.primaryColor : Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: active ? AppTheme.primaryColor : const Color(0xFFE2E8F0)),
-          boxShadow: active ? [BoxShadow(color: AppTheme.primaryColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] : null,
-        ),
-        alignment: Alignment.center,
-        child: Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: active ? Colors.white : AppTheme.textSecondary)),
       ),
     );
   }

@@ -12,6 +12,17 @@ router.get('/', auth, async (req, res) => {
     const query = { userId: req.user._id };
     if (status) query.status = status;
     
+    // Auto-update trip statuses based on dates
+    const now = new Date();
+    await Trip.updateMany(
+      { userId: req.user._id, status: 'planning', startDate: { $lte: now }, endDate: { $gte: now } },
+      { $set: { status: 'active' } }
+    );
+    await Trip.updateMany(
+      { userId: req.user._id, status: { $in: ['planning', 'active'] }, endDate: { $lt: now } },
+      { $set: { status: 'completed' } }
+    );
+    
     const trips = await Trip.find(query).sort({ startDate: -1 });
     res.json(trips);
   } catch (error) {

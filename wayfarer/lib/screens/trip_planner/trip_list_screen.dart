@@ -4,7 +4,9 @@ import '../../config/theme.dart';
 import '../../config/routes.dart';
 import '../../services/api_service.dart';
 import '../../models/trip_model.dart';
+import '../../providers/auth_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class TripListScreen extends StatefulWidget {
   const TripListScreen({super.key});
@@ -43,56 +45,88 @@ class _TripListScreenState extends State<TripListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final bool isGuest = !auth.isAuthenticated;
+
     return Scaffold(
       backgroundColor: AppTheme.lightBg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text('My Trips', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
         actions: [
-          IconButton(
-            onPressed: () async {
-              await Navigator.pushNamed(context, AppRoutes.createTrip);
-              _loadTrips();
-            },
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(color: AppTheme.primaryColor, borderRadius: BorderRadius.circular(8)),
-              child: const Icon(Icons.add, size: 20, color: Colors.white),
+          if (!isGuest)
+            IconButton(
+              onPressed: () async {
+                await Navigator.pushNamed(context, AppRoutes.createTrip);
+                _loadTrips();
+              },
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: AppTheme.primaryColor, borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.add, size: 20, color: Colors.white),
+              ),
             ),
-          ),
         ],
       ),
-      body: Column(
-        children: [
-          // Filter chips
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
+      body: isGuest
+          ? _buildGuestState()
+          : Column(
               children: [
-                _buildFilterChip('All', 'all'),
-                const SizedBox(width: 8),
-                _buildFilterChip('Planning', 'planning'),
-                const SizedBox(width: 8),
-                _buildFilterChip('Active', 'active'),
-                const SizedBox(width: 8),
-                _buildFilterChip('Completed', 'completed'),
+                // Filter chips
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      _buildFilterChip('All', 'all'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Planning', 'planning'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Active', 'active'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Completed', 'completed'),
+                    ],
+                  ),
+                ),
+                
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
+                      : _trips.isEmpty
+                          ? _buildEmptyState()
+                          : RefreshIndicator(
+                              onRefresh: _loadTrips,
+                              child: ListView.builder(
+                                padding: const EdgeInsets.all(16),
+                                itemCount: _trips.length,
+                                itemBuilder: (_, i) => _buildTripCard(_trips[i]),
+                              ),
+                            ),
+                ),
               ],
             ),
-          ),
-          
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
-                : _trips.isEmpty
-                    ? _buildEmptyState()
-                    : RefreshIndicator(
-                        onRefresh: _loadTrips,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _trips.length,
-                          itemBuilder: (_, i) => _buildTripCard(_trips[i]),
-                        ),
-                      ),
+    );
+  }
+
+  Widget _buildGuestState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.lock_outline, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+          const SizedBox(height: 16),
+          Text('Personalize Your Journey', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+          const SizedBox(height: 8),
+          Text('Log in to plan trips, create itineraries,\nand track your travels.', 
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary, height: 1.5)),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.login),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+              elevation: 0,
+            ),
+            child: const Text('Log In / Register'),
           ),
         ],
       ),

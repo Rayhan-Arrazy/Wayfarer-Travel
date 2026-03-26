@@ -5,7 +5,7 @@ const router = express.Router();
 
 // @route   GET /api/proxy/accommodation/search
 // @desc    Search for accommodation (hotels, hostels, apartments) using Overpass/OSM
-router.get('/search', auth, async (req, res) => {
+router.get('/search', async (req, res) => {
   try {
     const { lat, lng, radius, type } = req.query;
     const rad = radius || 5000;
@@ -83,7 +83,7 @@ router.get('/search', auth, async (req, res) => {
 
 // @route   GET /api/proxy/accommodation/details/:id
 // @desc    Get accommodation details by OSM node ID
-router.get('/details/:id', auth, async (req, res) => {
+router.get('/details/:id', async (req, res) => {
   try {
     const cacheKey = `accommodation_detail_${req.params.id}`;
     let data = getCached(cacheKey);

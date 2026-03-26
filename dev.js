@@ -1,112 +1,32 @@
-const { spawn, exec } = require('child_process');
-const http = require('http');
+const { execSync, spawn } = require('child_process');
 
-const PORTS = {
-    backend: 5000,
-    app: 3000,
-    admin: 3001
-};
+const PORTS = [5000, 3000, 3001];
 
-// 1. CLEANUP
-function clean() {
-    return new Promise((resolve) => {
-        console.log('Cleaning up old sessions...');
-        const portsToKill = Object.values(PORTS);
-        let completed = 0;
-        
-        portsToKill.forEach(port => {
-            const findCmd = `netstat -ano | findstr :${port}`;
-            exec(findCmd, (err, stdout) => {
-                if (stdout) {
-                    const lines = stdout.trim().split('\n');
-                    lines.forEach(line => {
-                        const parts = line.trim().split(/\s+/);
-                        const pid = parts[parts.length - 1];
-                        if (pid && pid !== '0') {
-                            exec(`taskkill /F /PID ${pid} /T`, () => {});
-                        }
-                    });
-                }
-                completed++;
-                if (completed === portsToKill.length) resolve();
-            });
-        });
-        
-        // Give it a moment to release ports
-        if (portsToKill.length === 0) resolve();
-    });
+// Clean ports before starting
+for (const port of PORTS) {
+  try {
+    if (process.platform === 'win32') {
+      const stdout = execSync(`netstat -ano | findstr :${port}`, { stdio: 'pipe' }).toString();
+      stdout.trim().split('\n').forEach(line => {
+        const pid = line.trim().split(/\s+/).pop();
+        if (pid && !isNaN(pid)) execSync(`taskkill /F /PID ${pid} /T`, { stdio: 'ignore' });
+      });
+    }
+  } catch (e) {}
 }
 
-// 2. WAIT FOR PORT
-function waitForPort(port) {
-    return new Promise((resolve) => {
-        const check = () => {
-            const req = http.request({ host: 'localhost', port, path: '/', method: 'GET' }, (res) => {
-                resolve();
-            });
-            req.on('error', () => {
-                setTimeout(check, 1000);
-            });
-            req.end();
-        };
-        check();
-    });
-}
+console.log('Finalizing Wayfarer Launch...');
 
-async function start() {
-    await clean();
-    
-    console.log('Launching Wayfarer...');
+// Start servers with raw logs so nothing is hidden
+const cmd = `npx concurrently --raw ` +
+            `"cd backend && node server.js" ` +
+            `"cd wayfarer && flutter run -d web-server --web-port=3000" ` +
+            `"cd wayfarer_admin && flutter run -d web-server --web-port=3001"`;
 
-    // Start Backend
-    const backend = spawn('cmd.exe', ['/c', 'cd backend && npm run dev'], { stdio: 'inherit' });
+spawn('cmd.exe', ['/c', cmd], { stdio: 'inherit', shell: true });
 
-    // Start App (Web Server Mode)
-    console.log('Initializing Customer App...');
-    const app = spawn('cmd.exe', ['/c', 'cd wayfarer && flutter run -d web-server --web-port=3000 --web-hostname=localhost'], { stdio: 'pipe' });
-    app.stdout.on('data', (data) => {
-        if (data.toString().includes('localhost:3000')) {
-            console.log('Customer App is ready.');
-        }
-    });
-
-    // Start Admin (Web Server Mode)
-    console.log('Initializing Admin Panel...');
-    const admin = spawn('cmd.exe', ['/c', 'cd wayfarer_admin && flutter run -d web-server --web-port=3001 --web-hostname=localhost'], { stdio: 'pipe' });
-    admin.stdout.on('data', (data) => {
-        if (data.toString().includes('localhost:3001')) {
-            console.log('Admin Panel is ready.');
-        }
-    });
-
-    // Wait for both to be accessible
-    await Promise.all([
-        waitForPort(3000),
-        waitForPort(3001)
-    ]);
-
-    // Use 'start' to launch default browser. Windows will group these if it's the same browser.
-    exec('start "" "http://localhost:3000"');
-    setTimeout(() => {
-        exec('start "" "http://localhost:3001"');
-    }, 500);
-
-    console.log('All systems operational.');
-
-    // Handle process termination
-    const cleanup = () => {
-        console.log('Shutting down services...');
-        backend.kill();
-        app.kill();
-        admin.kill();
-        process.exit();
-    };
-
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
-
-    // Keep the process alive
-    setInterval(() => {}, 1000);
-}
-
-start();
+console.log('--- System URLs ---');
+console.log('App:   http://localhost:3000');
+console.log('Admin: http://localhost:3001');
+console.log('API:   http://localhost:5000');
+console.log('-------------------');

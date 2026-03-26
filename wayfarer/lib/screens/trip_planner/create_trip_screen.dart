@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/theme.dart';
 import '../../services/api_service.dart';
-import 'package:intl/intl.dart';
 
+// Use package-absolute or local definitions for Admin Panel.
+// Do not use relative imports to mobile app directories.ive screens or providers here.
 class CreateTripScreen extends StatefulWidget {
   const CreateTripScreen({super.key});
 
@@ -43,6 +47,14 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
       final List data = response.data;
       setState(() {
         _countrySuggestions = data.take(8).toList();
+        
+        // Auto-select if there is an exact common name match (user typed it manually)
+        for (var c in _countrySuggestions) {
+          final commonName = c['name']?['common']?.toString().toLowerCase();
+          if (commonName == query.toLowerCase()) {
+            _selectedCountryCode = c['cca2'] ?? '';
+          }
+        }
       });
     } catch (e) {
       // Ignore

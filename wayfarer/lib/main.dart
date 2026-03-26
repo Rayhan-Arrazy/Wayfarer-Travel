@@ -36,7 +36,7 @@ class WayfarerApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             routes: AppRoutes.routes,
             onGenerateRoute: AppRoutes.onGenerateRoute,
-            initialRoute: auth.isAuthenticated ? AppRoutes.home : AppRoutes.login,
+            initialRoute: AppRoutes.home,
           );
         },
       ),

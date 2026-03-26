@@ -5,7 +5,7 @@ const router = express.Router();
 
 // @route   GET /api/proxy/food/restaurants
 // @desc    Search restaurants nearby
-router.get('/restaurants', auth, async (req, res) => {
+router.get('/restaurants', async (req, res) => {
   try {
     const { lat, lng, query, radius } = req.query;
     const rad = radius || 2000;
@@ -56,7 +56,7 @@ router.get('/restaurants', auth, async (req, res) => {
 
 // @route   GET /api/proxy/food/cuisine/:country
 // @desc    Get traditional cuisine for a country
-router.get('/cuisine/:country', auth, async (req, res) => {
+router.get('/cuisine/:country', async (req, res) => {
   try {
     const cacheKey = `cuisine_${req.params.country}`;
     let data = getCached(cacheKey);
@@ -82,7 +82,7 @@ router.get('/cuisine/:country', auth, async (req, res) => {
 
 // @route   GET /api/proxy/food/meal/:id
 // @desc    Get meal details by ID
-router.get('/meal/:id', auth, async (req, res) => {
+router.get('/meal/:id', async (req, res) => {
   try {
     const data = await axiosGet(`https://www.themealdb.com/api/json/v1/1/lookup.php`, {
       params: { i: req.params.id }
@@ -95,7 +95,7 @@ router.get('/meal/:id', auth, async (req, res) => {
 
 // @route   GET /api/proxy/food/barcode/:code
 // @desc    Get product info by barcode
-router.get('/barcode/:code', auth, async (req, res) => {
+router.get('/barcode/:code', async (req, res) => {
   try {
     const data = await callWithFallback(
       () => axiosGet(`https://world.openfoodfacts.org/api/v0/product/${req.params.code}.json`),

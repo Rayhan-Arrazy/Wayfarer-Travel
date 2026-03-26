@@ -5,7 +5,7 @@ const router = express.Router();
 
 // @route   GET /api/proxy/places/search
 // @desc    Search places by query
-router.get('/search', auth, async (req, res) => {
+router.get('/search', async (req, res) => {
   try {
     const { q, lat, lng } = req.query;
     const cacheKey = `places_search_${q}_${lat}_${lng}`;
@@ -33,7 +33,7 @@ router.get('/search', auth, async (req, res) => {
 
 // @route   GET /api/proxy/places/reverse
 // @desc    Reverse geocode (lat/lng to address)
-router.get('/reverse', auth, async (req, res) => {
+router.get('/reverse', async (req, res) => {
   try {
     const { lat, lng } = req.query;
     const cacheKey = `reverse_${lat}_${lng}`;
@@ -61,7 +61,7 @@ router.get('/reverse', auth, async (req, res) => {
 
 // @route   GET /api/proxy/places/nearby
 // @desc    Get nearby POIs using Overpass API
-router.get('/nearby', auth, async (req, res) => {
+router.get('/nearby', async (req, res) => {
   try {
     const { lat, lng, type, radius } = req.query;
     const rad = radius || 1000;
@@ -88,7 +88,7 @@ router.get('/nearby', auth, async (req, res) => {
 
 // @route   GET /api/proxy/places/route
 // @desc    Get routing directions
-router.get('/route', auth, async (req, res) => {
+router.get('/route', async (req, res) => {
   try {
     const { startLat, startLng, endLat, endLng, profile } = req.query;
     const routeProfile = profile || 'driving-car';
@@ -112,7 +112,7 @@ router.get('/route', auth, async (req, res) => {
 
 // @route   GET /api/proxy/places/wikipedia
 // @desc    Get Wikipedia summary for a place
-router.get('/wikipedia/:place', auth, async (req, res) => {
+router.get('/wikipedia/:place', async (req, res) => {
   try {
     const cacheKey = `wiki_${req.params.place}`;
     let data = getCached(cacheKey);

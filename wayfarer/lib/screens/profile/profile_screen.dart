@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/theme.dart';
 import '../../config/constants.dart';
 import '../../providers/auth_provider.dart';
+import '../../config/routes.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -43,147 +44,183 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final user = auth.user;
+    final bool isGuest = !auth.isAuthenticated;
 
     return Scaffold(
       backgroundColor: AppTheme.lightBg,
       appBar: AppBar(
         title: Text('Profile', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
         actions: [
-          TextButton(
-            onPressed: () async {
-              if (_isEditing) {
-                await auth.updateProfile({
-                  'name': _nameController.text.trim(),
-                  'homeCurrency': _selectedCurrency,
-                });
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Profile updated!'), backgroundColor: AppTheme.successColor),
-                  );
+          if (!isGuest)
+            TextButton(
+              onPressed: () async {
+                if (_isEditing) {
+                  await auth.updateProfile({
+                    'name': _nameController.text.trim(),
+                    'homeCurrency': _selectedCurrency,
+                  });
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Profile updated!'), backgroundColor: AppTheme.successColor),
+                    );
+                  }
                 }
-              }
-              setState(() => _isEditing = !_isEditing);
-            },
-            child: Text(_isEditing ? 'Save' : 'Edit',
-              style: GoogleFonts.inter(color: AppTheme.primaryColor, fontWeight: FontWeight.w600)),
-          ),
+                setState(() => _isEditing = !_isEditing);
+              },
+              child: Text(_isEditing ? 'Save' : 'Edit',
+                style: GoogleFonts.inter(color: AppTheme.primaryColor, fontWeight: FontWeight.w600)),
+            ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Avatar
-            Center(
-              child: Container(
-                width: 80, height: 80,
-                decoration: BoxDecoration(
-                  gradient: AppTheme.primaryGradient, shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.3), blurRadius: 12)],
-                ),
-                child: Center(
-                  child: Text((user?.name ?? 'U')[0].toUpperCase(),
-                    style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            Text('Personal Info', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-            const SizedBox(height: 12),
-            
-            TextFormField(
-              controller: _nameController,
-              enabled: _isEditing,
-              style: const TextStyle(color: AppTheme.textPrimary),
-              decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person, color: AppTheme.textMuted)),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              initialValue: user?.email ?? '',
-              enabled: false,
-              style: const TextStyle(color: AppTheme.textMuted),
-              decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email, color: AppTheme.textMuted)),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _selectedCurrency,
-              dropdownColor: AppTheme.lightSurface,
-              style: const TextStyle(color: AppTheme.textPrimary),
-              decoration: const InputDecoration(labelText: 'Home Currency', prefixIcon: Icon(Icons.currency_exchange, color: AppTheme.textMuted)),
-              items: _currencies.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-              onChanged: _isEditing ? (v) => setState(() => _selectedCurrency = v ?? 'USD') : null,
-            ),
-
-            const SizedBox(height: 28),
-            
-            if (user?.role == 'admin') ...[
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 28),
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final url = Uri.parse(AppConstants.adminUrl);
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url, mode: LaunchMode.externalApplication);
-                    }
-                  },
-                  icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
-                  label: Text('Launch Control Center', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.warningColor,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-            ],
-
-            // Emergency Contacts
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Emergency Contacts', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                if (_isEditing)
-                  IconButton(
-                    onPressed: _addEmergencyContact,
-                    icon: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(color: AppTheme.primaryColor, borderRadius: BorderRadius.circular(6)),
-                      child: const Icon(Icons.add, color: Colors.white, size: 16),
+      body: isGuest
+          ? _buildGuestState()
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Avatar
+                  Center(
+                    child: Container(
+                      width: 80, height: 80,
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.primaryGradient,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.3), blurRadius: 12)],
+                      ),
+                      child: Center(
+                        child: Text((user?.name ?? 'U')[0].toUpperCase(), style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
                     ),
                   ),
-              ],
+                  const SizedBox(height: 24),
+
+                  Text('Personal Info', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    controller: _nameController,
+                    enabled: _isEditing,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person, color: AppTheme.textMuted)),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    initialValue: user?.email ?? '',
+                    enabled: false,
+                    style: const TextStyle(color: AppTheme.textMuted),
+                    decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email, color: AppTheme.textMuted)),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _selectedCurrency,
+                    dropdownColor: AppTheme.lightSurface,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(labelText: 'Home Currency', prefixIcon: Icon(Icons.currency_exchange, color: AppTheme.textMuted)),
+                    items: _currencies.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: _isEditing ? (v) => setState(() => _selectedCurrency = v ?? 'USD') : null,
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  if (user?.role == 'admin') ...[
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 28),
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final url = Uri.parse(AppConstants.adminUrl);
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
+                        label: Text('Launch Control Center', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.warningColor,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // Emergency Contacts
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Emergency Contacts', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                      if (_isEditing)
+                        IconButton(
+                          onPressed: _addEmergencyContact,
+                          icon: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(color: AppTheme.primaryColor, borderRadius: BorderRadius.circular(6)),
+                            child: const Icon(Icons.add, color: Colors.white, size: 16),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (user?.emergencyContacts.isEmpty ?? true)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: AppTheme.lightCard, borderRadius: BorderRadius.circular(12)),
+                      child: Center(child: Text('No emergency contacts added', style: GoogleFonts.inter(color: AppTheme.textMuted))),
+                    )
+                  else
+                    ...user!.emergencyContacts.map((c) => Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppTheme.lightCard,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.lightBorder),
+                          ),
+                          child: Row(children: [
+                            const Icon(Icons.contact_emergency, color: AppTheme.errorColor, size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(c.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                              Text(c.phone, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
+                              if (c.relationship.isNotEmpty) Text(c.relationship, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
+                            ])),
+                          ]),
+                        )),
+                      ],
+                    ),
+                  ),
+    );
+  }
+
+  Widget _buildGuestState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.person_outline_rounded, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+          const SizedBox(height: 16),
+          Text('Welcome, Traveler', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+          const SizedBox(height: 8),
+          Text('Log in to unlock your profile, manage\npreferences, and sync your journeys.', 
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary, height: 1.5)),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.login),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+              elevation: 0,
             ),
-            const SizedBox(height: 12),
-            if (user?.emergencyContacts.isEmpty ?? true)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: AppTheme.lightCard, borderRadius: BorderRadius.circular(12)),
-                child: Center(child: Text('No emergency contacts added', style: GoogleFonts.inter(color: AppTheme.textMuted))),
-              )
-            else
-              ...user!.emergencyContacts.map((c) => Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppTheme.lightCard, borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.lightBorder),
-                ),
-                child: Row(children: [
-                  const Icon(Icons.contact_emergency, color: AppTheme.errorColor, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(c.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                    Text(c.phone, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
-                    if (c.relationship.isNotEmpty)
-                      Text(c.relationship, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
-                  ])),
-                ]),
-              )),
-          ],
-        ),
+            child: const Text('Log In / Register'),
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+             onPressed: () => Navigator.pop(context),
+             child: Text('Return to Explore', style: GoogleFonts.inter(color: AppTheme.primaryColor)),
+          ),
+        ],
       ),
     );
   }

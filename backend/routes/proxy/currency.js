@@ -5,7 +5,7 @@ const router = express.Router();
 
 // @route   GET /api/proxy/currency/rates
 // @desc    Get exchange rates
-router.get('/rates', auth, async (req, res) => {
+router.get('/rates', async (req, res) => {
   try {
     const { from, to } = req.query;
     const cacheKey = `rates_${from}_${to || 'all'}`;
@@ -31,7 +31,7 @@ router.get('/rates', auth, async (req, res) => {
 
 // @route   GET /api/proxy/currency/convert
 // @desc    Convert amount between currencies
-router.get('/convert', auth, async (req, res) => {
+router.get('/convert', async (req, res) => {
   try {
     const { from, to, amount } = req.query;
     if (!from || !to || !amount) {
@@ -73,7 +73,7 @@ router.get('/convert', auth, async (req, res) => {
 
 // @route   GET /api/proxy/currency/cost-of-living
 // @desc    Get cost of living data for a city
-router.get('/cost-of-living', auth, async (req, res) => {
+router.get('/cost-of-living', async (req, res) => {
   try {
     const { city } = req.query;
     const cacheKey = `col_${city}`;

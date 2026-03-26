@@ -5,7 +5,7 @@ const router = express.Router();
 
 // @route   GET /api/proxy/countries/:code
 // @desc    Get country info by code
-router.get('/countries/:code', auth, async (req, res) => {
+router.get('/countries/:code', async (req, res) => {
   try {
     const cacheKey = `country_${req.params.code}`;
     let data = getCached(cacheKey);
@@ -27,7 +27,7 @@ router.get('/countries/:code', auth, async (req, res) => {
 
 // @route   GET /api/proxy/countries/search/:name
 // @desc    Search countries by name
-router.get('/countries/search/:name', auth, async (req, res) => {
+router.get('/countries/search/:name', async (req, res) => {
   try {
     const cacheKey = `country_search_${req.params.name}`;
     let data = getCached(cacheKey);
@@ -45,7 +45,7 @@ router.get('/countries/search/:name', auth, async (req, res) => {
 
 // @route   GET /api/proxy/countries
 // @desc    Get all countries
-router.get('/countries', auth, async (req, res) => {
+router.get('/countries', async (req, res) => {
   try {
     const cacheKey = 'all_countries';
     let data = getCached(cacheKey);

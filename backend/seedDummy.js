@@ -3,6 +3,8 @@ const User = require('./models/User');
 const Trip = require('./models/Trip');
 const JournalEntry = require('./models/JournalEntry');
 const Favorite = require('./models/Favorite');
+const CountryGuide = require('./models/CountryGuide');
+const Notification = require('./models/Notification');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -18,7 +20,9 @@ async function seed() {
     await Trip.deleteMany({});
     await JournalEntry.deleteMany({});
     await Favorite.deleteMany({});
-    console.log('--- CLEARED ALL COLLECTIONS ---');
+    await CountryGuide.deleteMany({});
+    await Notification.deleteMany({});
+    console.log('--- CLEARED ALL 6 COLLECTIONS ---');
 
     // =============================================
     // 1. Create Users (7 users for realistic data)
@@ -502,7 +506,7 @@ async function seed() {
         location: { lat: 1.2834, lng: 103.8607 },
       },
       {
-        userId: marcus._id, type: 'restaurant', name: 'Ramen Ichiraku',
+        userId: marcus._id, type: 'restaurant', name: 'Tonkotsu Ramen',
         address: 'Shinjuku, Tokyo, Japan', rating: 4.6,
         imageUrl: 'https://images.unsplash.com/photo-1557872943-16a5ac26437e',
         location: { lat: 35.6938, lng: 139.7034 },
@@ -564,13 +568,68 @@ async function seed() {
     ]);
     console.log('--- 12 FAVORITES CREATED ---');
 
+    // =============================================
+    // 5. Create Country Guides (5 initial guides)
+    // =============================================
+    const guides = await CountryGuide.create([
+      {
+        name: 'Japan',
+        countryCode: 'JP',
+        description: 'A blend of ancient traditions and futuristic technology.',
+        flagUrl: 'https://flagcdn.com/w320/jp.png',
+        coverImage: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e',
+        tips: ['Get a JR Pass', 'Carry cash', 'Respect local etiquette'],
+        featured: true
+      },
+      {
+        name: 'Indonesia',
+        countryCode: 'ID',
+        description: 'Tropical paradise with thousands of islands.',
+        flagUrl: 'https://flagcdn.com/w320/id.png',
+        coverImage: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4',
+        tips: ['Rent a scooter', 'Try Nasi Goreng'],
+        featured: true
+      },
+      {
+        name: 'France',
+        countryCode: 'FR',
+        description: 'The global center of art, fashion and gastronomy.',
+        flagUrl: 'https://flagcdn.com/w320/fr.png',
+        coverImage: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34',
+        tips: ['Validate your train ticket', 'Learn basic French'],
+        featured: true
+      }
+    ]);
+    console.log('--- 3 COUNTRY GUIDES CREATED ---');
+
+    // =============================================
+    // 6. Create Notifications
+    // =============================================
+    await Notification.create([
+      {
+        userId: marcus._id,
+        title: 'Trip Update',
+        message: 'Your trip to Bali starts in 2 days! Pack your bags.',
+        type: 'trip_status'
+      },
+      {
+        userId: marcus._id,
+        title: 'Preparation Tip',
+        message: 'Don\'t forget to exchange some currency to IDR.',
+        type: 'preparation_tip'
+      }
+    ]);
+    console.log('--- 2 NOTIFICATIONS CREATED ---');
+
     console.log('\n===========================================');
-    console.log('  ✅ ALL DATA SEEDED SUCCESSFULLY');
+    console.log('  ✅ ALL DATA SEEDED SUCCESSFULLY (6 TABLES)');
     console.log('===========================================');
     console.log(`  👤 Users:    ${users.length}`);
     console.log(`  ✈️  Trips:    ${trips.length}`);
     console.log(`  📓 Journals: 11`);
     console.log(`  ⭐ Favorites: 12`);
+    console.log(`  📖 Guides:    3`);
+    console.log(`  🔔 Notifs:    2`);
     console.log('===========================================');
     console.log('\n  Login credentials:');
     console.log('  Admin: admin@wayfarer.com / password123');

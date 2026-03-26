@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/theme.dart';
-import '../../services/api_service.dart';
 
 class TransportScreen extends StatefulWidget {
   const TransportScreen({super.key});
@@ -11,364 +11,349 @@ class TransportScreen extends StatefulWidget {
 }
 
 class _TransportScreenState extends State<TransportScreen> {
-  final ApiService _api = ApiService();
-  final _fromController = TextEditingController();
-  final _toController = TextEditingController();
-  List<dynamic> _transitStops = [];
-  bool _isLoadingTransit = false;
-  bool _isLoadingRoute = false;
-  Map<String, dynamic>? _routeData;
-
-  @override
-  void dispose() {
-    _fromController.dispose();
-    _toController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadTransitStops() async {
-    setState(() => _isLoadingTransit = true);
-    try {
-      final response = await _api.getTransitStops(-6.2088, 106.8456, radius: 1000);
-      setState(() {
-        _transitStops = response.data['stops'] ?? [];
-        _isLoadingTransit = false;
-      });
-    } catch (e) {
-      setState(() => _isLoadingTransit = false);
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTransitStops();
-  }
-
-  Future<void> _findRoutes() async {
-    if (_fromController.text.isEmpty || _toController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter both From and To locations'), backgroundColor: AppTheme.warningColor),
-      );
-      return;
-    }
-    setState(() => _isLoadingRoute = true);
-    try {
-      // Geocode both locations
-      final fromRes = await _api.searchPlaces(_fromController.text);
-      final toRes = await _api.searchPlaces(_toController.text);
-      final List fromResults = fromRes.data;
-      final List toResults = toRes.data;
-
-      if (fromResults.isEmpty || toResults.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not find one or both locations'), backgroundColor: AppTheme.errorColor),
-          );
-        }
-        setState(() => _isLoadingRoute = false);
-        return;
-      }
-
-      final fromLat = double.parse(fromResults[0]['lat'].toString());
-      final fromLng = double.parse(fromResults[0]['lon'].toString());
-      final toLat = double.parse(toResults[0]['lat'].toString());
-      final toLng = double.parse(toResults[0]['lon'].toString());
-
-      final routeRes = await _api.getRoute(fromLat, fromLng, toLat, toLng);
-      setState(() {
-        _routeData = routeRes.data;
-        _isLoadingRoute = false;
-      });
-    } catch (e) {
-      setState(() => _isLoadingRoute = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorColor),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.lightBg,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: Text('Transport', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+        title: Text('Wayfarer', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppTheme.primaryColor),
+        actions: [
+          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        backgroundColor: const Color(0xFFF97316),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Route Planner
+            Text('PLANNED JOURNEY', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFFF97316), letterSpacing: 1.0)),
+            const SizedBox(height: 4),
+            Text('Tokyo to Kyoto', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: AppTheme.primaryColor, height: 1.1)),
+            const SizedBox(height: 8),
+            Text("Compare transit methods for your next leg. We've curated the most efficient paths for the Modern Nomad.", style: GoogleFonts.inter(fontSize: 13, height: 1.5, color: AppTheme.textSecondary)),
+            const SizedBox(height: 24),
+
+            // Departure Date Block
             Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: AppTheme.cardGradient,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppTheme.lightBorder),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.lightBorder)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                    child: const Icon(Icons.calendar_month, color: AppTheme.primaryColor, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('DEPARTURE', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.5)),
+                      Text('Oct 24, 08:30', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                ],
               ),
+            ),
+            const SizedBox(height: 24),
+
+            // Shinkansen dark block
+            Container(
+              width: double.infinity, padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(color: const Color(0xFF1E2E46), borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: const Color(0xFF1E2E46).withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))]),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Route Planner', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: _fromController,
-                    style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'From location',
-                      prefixIcon: const Icon(Icons.trip_origin, color: AppTheme.accentColor, size: 18),
-                      filled: true,
-                      fillColor: AppTheme.lightBg,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                        child: Text('SHINKANSEN', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 1.0)),
+                      ),
+                      const Icon(Icons.train, color: Colors.white, size: 24),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _toController,
-                    style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'To location',
-                      prefixIcon: const Icon(Icons.location_on, color: AppTheme.errorColor, size: 18),
-                      filled: true,
-                      fillColor: AppTheme.lightBg,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                    ),
+                  const SizedBox(height: 20),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text('2h 15m', style: GoogleFonts.outfit(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0)),
+                      const SizedBox(width: 8),
+                      Text('Direct', style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                    ],
                   ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isLoadingRoute ? null : _findRoutes,
-                      icon: _isLoadingRoute
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Icon(Icons.directions, size: 18),
-                      label: Text(_isLoadingRoute ? 'Searching...' : 'Find Routes'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Route Result
-            if (_routeData != null) ...
-              _buildRouteResult(),
-            
-            // Flight Deals
-            Container(
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.calendar_month, color: AppTheme.primaryColor, size: 28),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Cheapest Flight Calendar', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                        const SizedBox(height: 4),
-                        Text('Find the best dates to fly to your destination', style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.arrow_forward_ios, color: AppTheme.primaryColor, size: 16),
-                ],
-              ),
-            ),
-
-            // Transport Options
-            Text('Transport Options', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildTransportOption(Icons.flight, 'Flight', const Color(0xFF64B5F6)),
-                const SizedBox(width: 10),
-                _buildTransportOption(Icons.train, 'Train', const Color(0xFF4DB6AC)),
-                const SizedBox(width: 10),
-                _buildTransportOption(Icons.directions_bus, 'Bus', const Color(0xFFFFB74D)),
-                const SizedBox(width: 10),
-                _buildTransportOption(Icons.directions_car, 'Drive', const Color(0xFFBA68C8)),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Nearby Transit
-            Text('Nearby Transit Stops', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-            const SizedBox(height: 12),
-            _isLoadingTransit
-                ? const Center(child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: CircularProgressIndicator(color: AppTheme.primaryColor),
-                  ))
-                : _transitStops.isEmpty
-                    ? Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppTheme.lightCard,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Text('No transit stops found nearby', style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+                  const SizedBox(height: 12),
+                  Text('The gold standard of Japanese travel. High-speed, ultra-reliable, and city-center to city-center.', style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4)),
+                  const SizedBox(height: 24),
+                  Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('ESTIMATE', style: GoogleFonts.inter(fontSize: 9, color: Colors.white54, letterSpacing: 1.0)),
+                          const SizedBox(height: 4),
+                          Text('¥13,910', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ],
+                      ),
+                      ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF97316), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+                        child: Row(
+                          children: [
+                            Text('Book Seat', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.arrow_forward, size: 14),
+                          ],
                         ),
                       )
-                    : Column(
-                        children: _transitStops.take(10).map<Widget>((stop) => _buildTransitStop(stop)).toList(),
+                    ],
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Domestic Flight Card
+            _buildTransitCard(
+              icon: Icons.flight,
+              title: 'Domestic Flight',
+              durationLabel: '3H 45M TOTAL',
+              description: 'Includes check-in & transit to Haneda.',
+              price: '¥9,800',
+              badge: 'CHEAPEST',
+              badgeColor: const Color(0xFFF97316),
+            ),
+            const SizedBox(height: 16),
+
+            // Overnight Bus Card
+            _buildTransitCard(
+              icon: Icons.directions_bus,
+              title: 'Overnight Bus',
+              durationLabel: '8H 20M',
+              description: 'Direct from Shinjuku. Reclining seats available.',
+              price: '¥4,500',
+              badge: 'ECONOMY',
+              badgeColor: AppTheme.textSecondary,
+            ),
+            const SizedBox(height: 32),
+
+            // Live Arrivals
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Live Arrivals', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                Row(
+                  children: [
+                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFFF97316), shape: BoxShape.circle)),
+                    const SizedBox(width: 6),
+                    Text('SHIBUYA STATION', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: const Color(0xFFF97316), letterSpacing: 1.0)),
+                  ],
+                )
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            _buildArrivalItem('02', 'Yamanote Line', 'TOWARDS SHINJUKU'),
+            const SizedBox(height: 12),
+            _buildArrivalItem('07', 'Ginza Line', 'TOWARDS ASAKUSA'),
+            const SizedBox(height: 12),
+            _buildArrivalItem('11', 'Hanzomon Line', 'TOWARDS OSHIAGE'),
+            const SizedBox(height: 16),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: BorderSide(color: AppTheme.lightBorder),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: Colors.white,
+                ),
+                child: Text('VIEW ALL STATIONS', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.primaryColor, letterSpacing: 1.0)),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Map Area
+            Container(
+              height: 300, width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(20), border: Border.all(color: AppTheme.lightBorder),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: CachedNetworkImage(imageUrl: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80', fit: BoxFit.cover, color: Colors.white.withValues(alpha: 0.5), colorBlendMode: BlendMode.lighten),
+                  ),
+                  Positioned(top: 20, left: 20, child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)]),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search, size: 14, color: AppTheme.textSecondary),
+                        const SizedBox(width: 8),
+                        Text('Explore local spots', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
+                      ],
+                    ),
+                  )),
+                  // YOU ARE HERE
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(color: const Color(0xFF1E2E46), borderRadius: BorderRadius.circular(12)),
+                        child: Text('YOU ARE HERE', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 1.0)),
                       ),
+                      const SizedBox(height: 4),
+                      Container(width: 14, height: 14, decoration: BoxDecoration(color: const Color(0xFFF97316), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2))),
+                    ],
+                  ),
+                  // Map controls bottom right
+                  Positioned(
+                    bottom: 60, right: 16,
+                    child: Container(
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)]),
+                      child: Column(
+                        children: [
+                          IconButton(icon: const Icon(Icons.add, size: 18), onPressed: () {}, constraints: const BoxConstraints(), padding: const EdgeInsets.all(8)),
+                          Container(height: 1, width: 24, color: AppTheme.lightBorder),
+                          IconButton(icon: const Icon(Icons.remove, size: 18), onPressed: () {}, constraints: const BoxConstraints(), padding: const EdgeInsets.all(8)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Legend at bottom
+                  Positioned(
+                    bottom: 16, left: 16, right: 16,
+                    child: Container(
+                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                       child: Row(
+                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                         children: [
+                           Row(
+                             children: [
+                               Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF1E2E46), shape: BoxShape.circle)),
+                               const SizedBox(width: 6),
+                               Text('TRANSIT HUBS', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.5)),
+                               const SizedBox(width: 12),
+                               Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFF97316), shape: BoxShape.circle)),
+                               const SizedBox(width: 6),
+                               Text('DINING', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.5)),
+                             ],
+                           ),
+                           Row(
+                             children: [
+                               Text('FULL MAP', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: AppTheme.primaryColor, letterSpacing: 0.5)),
+                               const SizedBox(width: 4),
+                               const Icon(Icons.open_in_new, size: 12, color: AppTheme.primaryColor),
+                             ],
+                           )
+                         ],
+                       ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 100),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTransportOption(IconData icon, String label, Color color) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {},
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: AppTheme.lightCard,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.lightBorder),
-          ),
-          child: Column(
+  Widget _buildTransitCard({
+    required IconData icon, required String title, required String durationLabel, 
+    required String description, required String price, required String badge, required Color badgeColor
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.lightBorder)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 22),
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(color: Color(0xFFE0E7FF), shape: BoxShape.circle),
+                child: Icon(icon, color: AppTheme.primaryColor, size: 20),
               ),
-              const SizedBox(height: 8),
-              Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
+              Text(durationLabel, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTransitStop(dynamic stop) {
-    final name = stop['name'] ?? 'Unknown Stop';
-    final type = stop['type'] ?? 'stop';
-    final routes = stop['routes'] ?? '';
-
-    IconData icon = Icons.directions_bus;
-    Color color = AppTheme.warningColor;
-    if (type.contains('station') || type.contains('railway')) {
-      icon = Icons.train;
-      color = const Color(0xFF4DB6AC);
-    } else if (type.contains('tram')) {
-      icon = Icons.tram;
-      color = const Color(0xFFBA68C8);
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.lightCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.lightBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                if (routes.isNotEmpty)
-                  Text('Routes: $routes', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right, color: AppTheme.textMuted, size: 20),
+          const SizedBox(height: 16),
+          Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+          const SizedBox(height: 4),
+          Text(description, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(price, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+              Text(badge, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: badgeColor, letterSpacing: 1.0)),
+            ],
+          )
         ],
       ),
     );
   }
 
-  List<Widget> _buildRouteResult() {
-    final summary = _routeData?['features']?[0]?['properties']?['summary'] ?? {};
-    final distance = summary['distance'];
-    final duration = summary['duration'];
-
-    return [
-      Container(
-        margin: const EdgeInsets.only(bottom: 20),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.lightCard,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.accentColor.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+  Widget _buildArrivalItem(String mins, String line, String dir) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.lightBorder)),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppTheme.lightBorder), borderRadius: BorderRadius.circular(12)),
+            child: Column(
               children: [
-                const Icon(Icons.route, color: AppTheme.accentColor, size: 20),
-                const SizedBox(width: 8),
-                Text('Route Found', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.accentColor)),
+                Text('MIN', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w800, color: AppTheme.textSecondary, letterSpacing: 0.5)),
+                Text(mins, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
               ],
             ),
-            const SizedBox(height: 12),
-            if (distance != null)
-              Row(
-                children: [
-                  const Icon(Icons.straighten, size: 14, color: AppTheme.textMuted),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${(distance / 1000).toStringAsFixed(1)} km',
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-                  ),
-                ],
-              ),
-            if (duration != null) ...[
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Icon(Icons.access_time, size: 14, color: AppTheme.textMuted),
-                  const SizedBox(width: 6),
-                  Text(
-                    _formatDuration(duration.toDouble()),
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(line, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+                const SizedBox(height: 2),
+                Text(dir, style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary, letterSpacing: 0.5)),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+        ],
       ),
-    ];
-  }
-
-  String _formatDuration(double seconds) {
-    final hours = (seconds / 3600).floor();
-    final minutes = ((seconds % 3600) / 60).floor();
-    if (hours > 0) return '${hours}h ${minutes}m';
-    return '$minutes min';
+    );
   }
 }

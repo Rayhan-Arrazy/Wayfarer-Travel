@@ -5,7 +5,7 @@ const router = express.Router();
 
 // @route   GET /api/proxy/weather/current
 // @desc    Get current weather by coordinates
-router.get('/current', auth, async (req, res) => {
+router.get('/current', async (req, res) => {
   try {
     const { lat, lng } = req.query;
     if (!lat || !lng) {
@@ -43,7 +43,7 @@ router.get('/current', auth, async (req, res) => {
 
 // @route   GET /api/proxy/weather/air-quality
 // @desc    Get air quality data
-router.get('/air-quality', auth, async (req, res) => {
+router.get('/air-quality', async (req, res) => {
   try {
     const { lat, lng } = req.query;
     const data = await axiosGet(`https://air-quality-api.open-meteo.com/v1/air-quality`, {
@@ -62,7 +62,7 @@ router.get('/air-quality', auth, async (req, res) => {
 
 // @route   GET /api/proxy/weather/astronomy
 // @desc    Get sunrise/sunset data
-router.get('/astronomy', auth, async (req, res) => {
+router.get('/astronomy', async (req, res) => {
   try {
     const { lat, lng, date } = req.query;
     const cacheKey = `astronomy_${lat}_${lng}_${date}`;

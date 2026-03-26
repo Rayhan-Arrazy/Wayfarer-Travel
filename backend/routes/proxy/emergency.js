@@ -5,7 +5,7 @@ const router = express.Router();
 
 // @route   GET /api/proxy/emergency/numbers/:countryCode
 // @desc    Get emergency numbers for a country
-router.get('/numbers/:countryCode', auth, async (req, res) => {
+router.get('/numbers/:countryCode', async (req, res) => {
   try {
     const cacheKey = `emergency_${req.params.countryCode}`;
     let data = getCached(cacheKey);
@@ -36,7 +36,7 @@ router.get('/numbers/:countryCode', auth, async (req, res) => {
 
 // @route   GET /api/proxy/emergency/hospitals
 // @desc    Get nearby hospitals and pharmacies
-router.get('/hospitals', auth, async (req, res) => {
+router.get('/hospitals', async (req, res) => {
   try {
     const { lat, lng, radius } = req.query;
     const rad = radius || 5000;
@@ -76,7 +76,7 @@ router.get('/hospitals', auth, async (req, res) => {
 
 // @route   GET /api/proxy/emergency/health-alerts
 // @desc    Get WHO health alerts
-router.get('/health-alerts', auth, async (req, res) => {
+router.get('/health-alerts', async (req, res) => {
   try {
     const cacheKey = 'who_health_alerts';
     let data = getCached(cacheKey);

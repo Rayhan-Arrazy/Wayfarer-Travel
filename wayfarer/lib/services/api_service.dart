@@ -157,6 +157,10 @@ class ApiService {
     return _dio.get('/proxy/countries');
   }
 
+  Future<Response> getCountryGuides() async {
+    return _dio.get('/proxy/guides');
+  }
+
   Future<Response> getWeather(double lat, double lng) => getCurrentWeather(lat, lng);
 
   Future<Response> getCurrentWeather(double lat, double lng) async {

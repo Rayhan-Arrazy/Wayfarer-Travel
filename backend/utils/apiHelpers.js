@@ -65,13 +65,19 @@ const getUnsplashImage = async (query) => {
       }
     }
     
-    // Fallback: Use dynamic source image
-    const fallback = `https://images.unsplash.com/photo-1500000000000?q=80&w=800&auto=format&fit=crop`; // Generic, but we can make it search-like
-    // Use a deterministic search URL that works without key for previewing
-    const searchUrl = `https://source.unsplash.com/featured/800x600/?${encodeURIComponent(query)}`;
-    return searchUrl;
+    // Fallback: Use dynamic source image from a more reliable provider if no key
+    const travelPhotos = [
+      'https://images.unsplash.com/photo-1488646953014-85cb44e25828', // Luggage
+      'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1', // Mountains
+      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e', // Beach
+      'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800', // Road trip
+      'https://images.unsplash.com/photo-1530789253388-582c481c54b0', // Traveler
+    ];
+    const randomIndex = Math.abs(query.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % travelPhotos.length;
+    const fallback = `${travelPhotos[randomIndex]}?q=80&w=800&auto=format&fit=crop`;
+    return fallback;
   } catch (err) {
-    return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop'; // Travel fallback
+    return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop';
   }
 };
 

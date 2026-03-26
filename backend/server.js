@@ -38,6 +38,7 @@ app.use('/api/proxy/food', require('./routes/proxy/food'));
 app.use('/api/proxy/transport', require('./routes/proxy/transport'));
 app.use('/api/proxy/emergency', require('./routes/proxy/emergency'));
 app.use('/api/proxy/accommodation', require('./routes/proxy/accommodation'));
+app.use('/api/proxy/guides', require('./routes/proxy/guides'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -67,8 +68,8 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🧭 Wayfarer API Server running on port ${PORT}`);
-  console.log(`   Health check: http://localhost:${PORT}/api/health`);
+  console.log(`Wayfarer API Server running on port ${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/api/health`);
 });
 
 module.exports = app;

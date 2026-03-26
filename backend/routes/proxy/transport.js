@@ -5,7 +5,7 @@ const router = express.Router();
 
 // @route   GET /api/proxy/transport/routes
 // @desc    Get transport options between two locations
-router.get('/routes', auth, async (req, res) => {
+router.get('/routes', async (req, res) => {
   try {
     const { fromLat, fromLng, toLat, toLng, from, to } = req.query;
     
@@ -29,7 +29,7 @@ router.get('/routes', auth, async (req, res) => {
 
 // @route   GET /api/proxy/transport/transit
 // @desc    Get public transit info nearby
-router.get('/transit', auth, async (req, res) => {
+router.get('/transit', async (req, res) => {
   try {
     const { lat, lng, radius } = req.query;
     const rad = radius || 500;
@@ -69,7 +69,7 @@ router.get('/transit', auth, async (req, res) => {
 
 // @route   GET /api/proxy/transport/flights
 // @desc    Search flights (Amadeus sandbox)
-router.get('/flights', auth, async (req, res) => {
+router.get('/flights', async (req, res) => {
   try {
     const { origin, destination, departureDate, adults } = req.query;
     
