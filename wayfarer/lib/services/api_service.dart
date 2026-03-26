@@ -323,4 +323,8 @@ class ApiService {
   Future<Response> getAdminTrips({int page = 1, int limit = 20}) async {
     return _dio.get('/admin/trips', queryParameters: {'page': page, 'limit': limit});
   }
+
+  Future<Response> searchCountryGuides(String query) async {
+    return _dio.get('/proxy/guides/search', queryParameters: {'q': query});
+  }
 }

@@ -13,6 +13,7 @@ import '../guide/guide_list_screen.dart';
 import '../map/map_screen.dart';
 import '../trip_planner/trip_list_screen.dart';
 import '../journal/journal_screen.dart';
+import '../../models/trip_model.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -88,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           width: 52, height: 52,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                            color: AppTheme.primaryColor.withOpacity(0.1),
                             border: Border.all(color: AppTheme.lightBorder, width: 2),
                           ),
                           child: Center(
@@ -112,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(userName, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                            Text(userName, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700)),
                             Text(auth.isAuthenticated ? (auth.isAdmin ? 'ADMIN MEMBER' : 'PREMIUM MEMBER') : 'GUEST USER',
                                 style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textMuted, letterSpacing: 0.5)),
                           ],
@@ -207,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1: return const TripListScreen();
       case 2: return const MapScreen();
       case 3: return _buildExplorePage();
-      case 4: return const JournalScreen();
+      case 4: return JournalScreen(tripId: context.watch<TripProvider>().selectedTrip?.id);
       default: return _buildHomePage();
     }
   }
@@ -218,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHomePage() {
     final auth = context.watch<AuthProvider>();
     final tripProvider = context.watch<TripProvider>();
-    final upcomingTrip = tripProvider.upcomingTrip;
+    final upcomingTrip = tripProvider.selectedTrip; // Changed to selectedTrip
     final userName = auth.user?.name.split(' ').first ?? 'Traveler';
 
     return SafeArea(
@@ -275,11 +276,50 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 8),
+
+              // Trip Selector Dropdown
+              if (tripProvider.trips.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.lightBorder),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: tripProvider.selectedTrip?.id,
+                        isExpanded: true,
+                        icon: const Icon(Icons.keyboard_arrow_down, color: AppTheme.primaryColor),
+                        items: tripProvider.trips.map((t) {
+                          return DropdownMenuItem(
+                            value: t.id,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.flight_takeoff, size: 16, color: AppTheme.primaryColor),
+                                const SizedBox(width: 12),
+                                Expanded(child: Text('${t.destination} (${DateFormat('MMM d').format(t.startDate)})', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600))),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                         onChanged: (id) {
+                          final selected = tripProvider.trips.firstWhere((t) => t.id == id);
+                          tripProvider.setSelectedTrip(selected);
+                        },
+                      ),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 16),
 
-              // Upcoming Trip Card — MATCHES PROTOTYPE with map preview
-              if (upcomingTrip != null)
-                _buildUpcomingTripCard(upcomingTrip)
+              // Upcoming/Selected Trip Card
+              if (tripProvider.selectedTrip != null)
+                _buildUpcomingTripCard(tripProvider.selectedTrip!)
               else
                 _buildNoTripCard(),
 
@@ -306,88 +346,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 ...upcomingTrip.checklist.take(4).map((item) => _buildChecklistItem(item, upcomingTrip)),
               ],
 
-              const SizedBox(height: 24),
-
               // Your Trips carousel
-              if (tripProvider.trips.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Your Trips', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
-                      GestureDetector(
-                        onTap: () => setState(() => _currentIndex = 1),
-                        child: Text('See All', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFFF97316))),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 130,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    clipBehavior: Clip.none,
-                    itemCount: tripProvider.trips.length.clamp(0, 5),
-                    itemBuilder: (ctx, i) {
-                      final trip = tripProvider.trips[i];
-                      final coverImg = trip.coverImage.isNotEmpty ? trip.coverImage : 'https://images.unsplash.com/photo-1488646953014-85cb44e25828';
-                      return GestureDetector(
-                        onTap: () async {
-                          await Navigator.pushNamed(context, AppRoutes.tripDetail, arguments: trip.id);
-                          if (mounted) context.read<TripProvider>().fetchTrips();
-                        },
-                        child: Container(
-                          width: 180,
-                          margin: const EdgeInsets.only(right: 14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            image: DecorationImage(image: CachedNetworkImageProvider('$coverImg?w=400&q=80'), fit: BoxFit.cover),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 4))],
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)]),
-                            ),
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: trip.isActive ? AppTheme.successColor : trip.isCompleted ? Colors.white24 : const Color(0xFFF97316),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(trip.status.toUpperCase(), style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.5)),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(trip.destination, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                Text('${DateFormat('MMM dd').format(trip.startDate)} - ${DateFormat('MMM dd').format(trip.endDate)}', style: GoogleFonts.inter(fontSize: 10, color: Colors.white70)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+              _buildTripsCarousel(tripProvider.trips),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
-              // Quick Feature Grid (2 rows of 4)
+              // Quick Feature Grid (Restored)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Travel Toolkit', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
-                    Text('ALL TOOLS', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFFF97316))),
                   ],
                 ),
               ),
@@ -405,19 +375,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 12),
                       _buildQuickFeature(Icons.favorite, 'Saved', AppRoutes.favorites, const Color(0xFFEC4899)),
                     ]),
-                    const SizedBox(height: 12),
-                    Row(children: [
-                      _buildQuickFeature(Icons.restaurant, 'Food', AppRoutes.food, const Color(0xFFF59E0B)),
-                      const SizedBox(width: 12),
-                      _buildQuickFeature(Icons.hotel, 'Stays', AppRoutes.accommodation, const Color(0xFF8B5CF6)),
-                      const SizedBox(width: 12),
-                      _buildQuickFeature(Icons.directions_bus, 'Transit', AppRoutes.transport, const Color(0xFFF97316)),
-                      const SizedBox(width: 12),
-                      _buildQuickFeature(Icons.emergency, 'SOS', AppRoutes.emergency, const Color(0xFFEF4444)),
-                    ]),
                   ],
                 ),
               ),
+
+              const SizedBox(height: 32),
+
+              // IMPROVISED: Itinerary & Budget
+              if (tripProvider.selectedTrip != null) ...[
+                _buildItinerarySection(tripProvider.selectedTrip!),
+                const SizedBox(height: 32),
+                _buildBudgetSection(tripProvider.selectedTrip!),
+              ],
+              
+              const SizedBox(height: 100),
             ],
           ),
         ),
@@ -428,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // =============================================
   // Upcoming Trip Card — with map preview like prototype
   // =============================================
-  Widget _buildUpcomingTripCard(dynamic trip) {
+  Widget _buildUpcomingTripCard(TripModel trip) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GestureDetector(
@@ -440,7 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFF1E2E46),
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: const Color(0xFF1E2E46).withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 10))],
+            boxShadow: [BoxShadow(color: const Color(0xFF1E2E46).withOpacity(0.25), blurRadius: 20, offset: const Offset(0, 10))],
           ),
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -459,7 +430,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
                     child: const Icon(Icons.luggage, color: Colors.white, size: 18),
                   ),
                 ],
@@ -488,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? '${trip.coverImage}?w=800&q=60'
                             : 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=60',
                         height: 120, width: double.infinity, fit: BoxFit.cover,
-                        color: const Color(0xFF1E2E46).withValues(alpha: 0.5),
+                        color: const Color(0xFF1E2E46).withOpacity(0.5),
                         colorBlendMode: BlendMode.darken,
                         errorWidget: (_, __, ___) => Container(color: const Color(0xFF2D3748)),
                       ),
@@ -609,6 +580,128 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTripsCarousel(List<TripModel> trips) {
+    if (trips.isEmpty) return const SizedBox.shrink();
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Your Trips', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+              GestureDetector(
+                onTap: () => setState(() => _currentIndex = 1),
+                child: Text('See All', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFFF97316))),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 130,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            clipBehavior: Clip.none,
+            itemCount: trips.length.clamp(0, 5),
+            itemBuilder: (ctx, i) {
+              final trip = trips[i];
+              return GestureDetector(
+                onTap: () => Navigator.pushNamed(context, AppRoutes.tripDetail, arguments: trip.id),
+                child: Container(
+                  width: 180,
+                  margin: const EdgeInsets.only(right: 14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    image: DecorationImage(image: CachedNetworkImageProvider('${trip.coverImage}?w=400&q=80'), fit: BoxFit.cover),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4))],
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.7)]),
+                    ),
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(trip.destination, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white), maxLines: 1),
+                        Text('${DateFormat('MMM dd').format(trip.startDate)} - ${DateFormat('MMM dd').format(trip.endDate)}', style: GoogleFonts.inter(fontSize: 10, color: Colors.white70)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildItinerarySection(TripModel trip) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Adventure Timeline', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+          const SizedBox(height: 16),
+          _buildItineraryItem('Day 1: Arrival & Check-in', 'Airport Pickup • Hotel Senso • Dinner', '09:00 AM', true),
+          _buildItineraryItem('Day 2: Exploration', 'City Tour • Main Landmarks', '08:30 AM', false),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItineraryItem(String title, String spots, String time, bool isDone) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Container(width: 12, height: 12, decoration: BoxDecoration(color: isDone ? const Color(0xFFF97316) : Colors.white, shape: BoxShape.circle, border: Border.all(color: const Color(0xFFF97316), width: 2))),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$time • $title', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                Text(spots, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildBudgetSection(TripModel trip) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Budget Overview', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(20)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total Budget', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF4338CA))),
+                Text('\$${trip.budget}', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF4338CA))),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

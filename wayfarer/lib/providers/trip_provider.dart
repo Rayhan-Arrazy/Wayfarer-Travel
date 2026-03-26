@@ -8,10 +8,12 @@ class TripProvider with ChangeNotifier {
   final Dio _dio = Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
   List<TripModel> _trips = [];
   TripModel? _upcomingTrip;
+  TripModel? _selectedTrip;
   bool _isLoading = false;
 
   List<TripModel> get trips => _trips;
   TripModel? get upcomingTrip => _upcomingTrip;
+  TripModel? get selectedTrip => _selectedTrip ?? _upcomingTrip;
   bool get isLoading => _isLoading;
 
   List<TripModel> get activeTrips => _trips.where((t) => t.isActive).toList();
@@ -83,6 +85,11 @@ class TripProvider with ChangeNotifier {
 
   void setUpcomingTrip(TripModel trip) {
     _upcomingTrip = trip;
+    notifyListeners();
+  }
+
+  void setSelectedTrip(TripModel? trip) {
+    _selectedTrip = trip;
     notifyListeners();
   }
 }

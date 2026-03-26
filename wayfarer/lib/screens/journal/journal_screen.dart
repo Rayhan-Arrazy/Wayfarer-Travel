@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
+import '../../providers/trip_provider.dart';
 import '../../config/theme.dart';
 
 class JournalScreen extends StatefulWidget {
-  const JournalScreen({super.key});
+  final String? tripId;
+  const JournalScreen({super.key, this.tripId});
 
   @override
   State<JournalScreen> createState() => _JournalScreenState();
@@ -13,6 +16,9 @@ class JournalScreen extends StatefulWidget {
 class _JournalScreenState extends State<JournalScreen> {
   @override
   Widget build(BuildContext context) {
+    final tripProvider = context.watch<TripProvider>();
+    final selectedTrip = tripProvider.selectedTrip;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -38,7 +44,7 @@ class _JournalScreenState extends State<JournalScreen> {
           children: [
             Text('CURRENT ADVENTURE', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFFF97316), letterSpacing: 1.0)),
             const SizedBox(height: 4),
-            Text('Kyoto Reflections', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: AppTheme.primaryColor, height: 1.1)),
+            Text(selectedTrip?.destination ?? 'My Adventures', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: AppTheme.primaryColor, height: 1.1)),
             const SizedBox(height: 12),
             Row(
               children: [

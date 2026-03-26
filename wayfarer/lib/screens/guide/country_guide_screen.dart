@@ -17,13 +17,14 @@ class CountryGuideScreen extends StatefulWidget {
 class _CountryGuideScreenState extends State<CountryGuideScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ApiService _api = ApiService();
-  
 
-  
   // Cuisine Data
   List<dynamic> _popularMeals = [];
   bool _isLoadingCuisine = false;
 
+  
+
+  
   // Lodging Data
   List<dynamic> _hotels = [];
   List<dynamic> _filteredHotels = [];
@@ -31,12 +32,13 @@ class _CountryGuideScreenState extends State<CountryGuideScreen> with SingleTick
   String _selectedRating = 'Any';
 
   // Transport Data
-
+  List<dynamic> _emergencyNumbers = [];
+  bool _isLoadingEmergency = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadAllData();
   }
 
@@ -45,11 +47,20 @@ class _CountryGuideScreenState extends State<CountryGuideScreen> with SingleTick
     final code = widget.countryData['cca2'] ?? '';
     final latlng = widget.countryData['latlng'] as List<dynamic>?;
     
-    // Attempt detailed lookup
-      await _api.getCountryInfo(code);
-
     _loadCuisine(name);
     _loadLodging(latlng);
+    _loadEmergency(code);
+  }
+
+  Future<void> _loadEmergency(String countryCode) async {
+    setState(() => _isLoadingEmergency = true);
+    try {
+      final res = await _api.getEmergencyNumbers(countryCode);
+      if (mounted) {
+        setState(() => _emergencyNumbers = [res.data]);
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _isLoadingEmergency = false);
   }
 
   Future<void> _loadCuisine(String countryName) async {
@@ -135,8 +146,9 @@ class _CountryGuideScreenState extends State<CountryGuideScreen> with SingleTick
                   tabs: const [
                     Tab(text: "OVERVIEW & MAP"),
                     Tab(text: "CUISINE"),
-                    Tab(text: "ACCOMMODATION"),
+                    Tab(text: "LODGING"),
                     Tab(text: "TRANSPORT"),
+                    Tab(text: "EMERGENCY"),
                   ],
                 ),
               ),
@@ -151,6 +163,7 @@ class _CountryGuideScreenState extends State<CountryGuideScreen> with SingleTick
             _buildCuisineTab(),
             _buildLodgingTab(),
             _buildTransportTab(),
+            _buildEmergencyTab(),
           ],
         ),
       ),
@@ -414,6 +427,82 @@ class _CountryGuideScreenState extends State<CountryGuideScreen> with SingleTick
               ],
             ),
           )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencyTab() {
+    if (_isLoadingEmergency) return const Center(child: CircularProgressIndicator());
+    final emg = _emergencyNumbers.isNotEmpty ? _emergencyNumbers.first : null;
+    
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Emergency Services', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.red.shade700)),
+          const SizedBox(height: 8),
+          Text('Keep these numbers saved for immediate assistance.', style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted)),
+          const SizedBox(height: 24),
+          
+          _emergencyCard('Police', emg?['police']?['all']?[0] ?? '112', Icons.local_police, Colors.blue),
+          const SizedBox(height: 12),
+          _emergencyCard('Ambulance', emg?['ambulance']?['all']?[0] ?? '112', Icons.medical_services, Colors.red),
+          const SizedBox(height: 12),
+          _emergencyCard('Fire Department', emg?['fire']?['all']?[0] ?? '112', Icons.fireplace, Colors.orange),
+          
+          const SizedBox(height: 32),
+          Text('Safety Tips', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 16),
+          _safetyTip('Always carry a copy of your passport.'),
+          _safetyTip('Register with your embassy upon arrival.'),
+          _safetyTip('Keep emergency cash in a separate location.'),
+        ],
+      ),
+    );
+  }
+
+  Widget _emergencyCard(String title, String number, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
+                const SizedBox(height: 4),
+                Text(number, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w900, color: color)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: const Icon(Icons.phone, color: Colors.white, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _safetyTip(String tip) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          const Icon(Icons.shield, color: Colors.green, size: 18),
+          const SizedBox(width: 12),
+          Expanded(child: Text(tip, style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textPrimary))),
         ],
       ),
     );

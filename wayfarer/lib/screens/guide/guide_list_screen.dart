@@ -114,17 +114,38 @@ class _GuideListScreenState extends State<GuideListScreen> with SingleTickerProv
   }
 
   void _filterCountries(String query) {
+    _performSearch(query);
+  }
+
+  Future<void> _performSearch(String query) async {
     if (query.isEmpty) {
       setState(() => _filteredCountries = _countries);
       return;
     }
+    
     final lowercaseQuery = query.toLowerCase();
-    setState(() {
-      _filteredCountries = _countries.where((c) {
-        final name = c['name']?['common']?.toString().toLowerCase() ?? '';
-        return name.contains(lowercaseQuery);
-      }).toList();
-    });
+    final localResults = _countries.where((c) {
+      final name = c['name']?['common']?.toString().toLowerCase() ?? '';
+      return name.contains(lowercaseQuery);
+    }).toList();
+
+    if (localResults.isNotEmpty) {
+      setState(() => _filteredCountries = localResults);
+    } else {
+      // DYNAMIC SEARCH: Fetch from external sources via backend
+      setState(() => _isLoading = true);
+      try {
+        final res = await _api.searchCountryGuides(query);
+        if (mounted) {
+          setState(() {
+            _filteredCountries = res.data;
+            _isLoading = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -231,83 +252,108 @@ class _GuideListScreenState extends State<GuideListScreen> with SingleTickerProv
   }
 
   Widget _buildTravelStylesTab() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(20),
-      itemCount: _travelTypes.length,
-      itemBuilder: (context, index) {
-        final type = _travelTypes[index];
-        final List<String> tips = List<String>.from(type['tips']);
-        
-        return Container(
-          margin: const EdgeInsets.only(bottom: 24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppTheme.lightBorder),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                child: Image.network(
-                  type['image'],
-                  height: 160,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('TRAVEL PACKAGES', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.5)),
+          const SizedBox(height: 8),
+          Text('Expertly Curated Journeys', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
+          const SizedBox(height: 24),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _travelTypes.length,
+            itemBuilder: (context, index) {
+              final type = _travelTypes[index];
+              return GestureDetector(
+                onTap: () {
+                  // Find a relevant country if possible, or just default to Japan/France for demo
+                  final Map<String, dynamic> fallback = {
+                    'name': {'common': 'Japan'},
+                    'cca2': 'JP',
+                    'flags': {'png': 'https://flagcdn.com/w320/jp.png'},
+                    'latlng': [36.0, 138.0],
+                    'region': 'Asia',
+                    'subregion': 'Eastern Asia',
+                    'population': 125800000,
+                  };
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => CountryGuideScreen(countryData: fallback),
+                  ));
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 24),
                   width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_,__,___) => Container(height: 160, color: Colors.grey.shade200),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF97316).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(type['icon'], color: const Color(0xFFF97316), size: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5))],
+                    border: Border.all(color: AppTheme.lightBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                        child: Stack(
+                          children: [
+                            Image.network(type['image'], height: 180, width: double.infinity, fit: BoxFit.cover),
+                            Positioned(
+                              top: 16, right: 16,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.star, color: Colors.amber, size: 14),
+                                    const SizedBox(width: 4),
+                                    Text('4.9', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(type['title'], style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
-                              const SizedBox(height: 4),
-                              Text(type['subtitle'], style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Text('ESSENTIAL TIPS', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.0)),
-                    const SizedBox(height: 12),
-                    ...tips.map((tip) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.check_circle, size: 16, color: Colors.green),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(tip, style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary))),
-                        ],
                       ),
-                    )).toList(),
-                  ],
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(type['title'].toUpperCase(), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFFF97316), letterSpacing: 1.2)),
+                            const SizedBox(height: 6),
+                            Text(type['subtitle'], style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted, height: 1.4)),
+                            const SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.av_timer_outlined, size: 18, color: AppTheme.textMuted),
+                                    const SizedBox(width: 6),
+                                    Text('8-12 Days', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textMuted)),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(color: AppTheme.primaryColor, borderRadius: BorderRadius.circular(12)),
+                                  child: Text('EXPLORE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

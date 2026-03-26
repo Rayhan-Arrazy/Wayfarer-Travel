@@ -26,7 +26,6 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
   DateTime _endDate = DateTime.now().add(const Duration(days: 14));
   int _partySize = 1;
   String _selectedCountryCode = '';
-  List<dynamic> _countrySuggestions = [];
   bool _isLoading = false;
 
   @override
@@ -35,30 +34,6 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
     _notesController.dispose();
     _budgetController.dispose();
     super.dispose();
-  }
-
-  Future<void> _searchCountries(String query) async {
-    if (query.length < 2) {
-      setState(() => _countrySuggestions = []);
-      return;
-    }
-    try {
-      final response = await _api.searchCountries(query);
-      final List data = response.data;
-      setState(() {
-        _countrySuggestions = data.take(8).toList();
-        
-        // Auto-select if there is an exact common name match (user typed it manually)
-        for (var c in _countrySuggestions) {
-          final commonName = c['name']?['common']?.toString().toLowerCase();
-          if (commonName == query.toLowerCase()) {
-            _selectedCountryCode = c['cca2'] ?? '';
-          }
-        }
-      });
-    } catch (e) {
-      // Ignore
-    }
   }
 
   Future<void> _selectDate(bool isStart) async {
@@ -152,53 +127,74 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Destination section
+              // Destination section with Autocomplete
               Text('Where are you going?', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _destController,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Destination Country',
-                  prefixIcon: Icon(Icons.public, color: AppTheme.textMuted),
-                  hintText: 'e.g. Japan, France, Thailand',
-                ),
-                onChanged: _searchCountries,
-                validator: (v) => v == null || v.isEmpty ? 'Destination is required' : null,
+              Autocomplete<Object>(
+                optionsBuilder: (TextEditingValue value) async {
+                  if (value.text.length < 2) return [];
+                  try {
+                    final resp = await _api.searchCountries(value.text);
+                    return (resp.data as List).cast<Object>();
+                  } catch (e) {
+                    return [];
+                  }
+                },
+                displayStringForOption: (option) => ((option as Map)['name']?['common'] ?? '').toString(),
+                fieldViewBuilder: (ctx, controller, focus, onFieldSubmitted) {
+                  return TextFormField(
+                    controller: controller,
+                    focusNode: focus,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(
+                      labelText: 'Destination Country',
+                      prefixIcon: Icon(Icons.public, color: AppTheme.textMuted),
+                      hintText: 'e.g. Japan, France, Thailand',
+                    ),
+                    onFieldSubmitted: (v) => onFieldSubmitted(),
+                    validator: (v) => v == null || v.isEmpty ? 'Destination is required' : null,
+                  );
+                },
+                onSelected: (selection) {
+                  final sel = selection as Map;
+                  _destController.text = sel['name']?['common'] ?? '';
+                  setState(() {
+                    _selectedCountryCode = sel['cca2'] ?? '';
+                  });
+                },
+                optionsViewBuilder: (ctx, onSelected, options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(12),
+                      color: AppTheme.lightSurface,
+                      child: Container(
+                        width: MediaQuery.of(ctx).size.width - 40,
+                        constraints: const BoxConstraints(maxHeight: 250),
+                        child: ListView.separated(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1, color: AppTheme.lightBorder),
+                          itemBuilder: (ctx, idx) {
+                            final option = options.elementAt(idx) as Map;
+                            final name = option['name']?['common'] ?? '';
+                            final flag = option['flags']?['png'] ?? '';
+                            return ListTile(
+                              leading: flag.isNotEmpty 
+                                ? Image.network(flag, width: 24, height: 16, fit: BoxFit.cover)
+                                : const Icon(Icons.flag, size: 18, color: AppTheme.textMuted),
+                              title: Text(name, style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textPrimary)),
+                              onTap: () => onSelected(option),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
-              
-              // Country suggestions
-              if (_countrySuggestions.isNotEmpty)
-                Container(
-                  margin: const EdgeInsets.only(top: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.lightSurface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.lightBorder),
-                  ),
-                  child: Column(
-                    children: _countrySuggestions.map<Widget>((c) {
-                      final name = c['name']?['common'] ?? '';
-                      final code = c['cca2'] ?? '';
-                      final flag = c['flags']?['png'] ?? '';
-                      return ListTile(
-                        dense: true,
-                        leading: flag.isNotEmpty
-                            ? Image.network(flag, width: 28, height: 18, fit: BoxFit.cover)
-                            : const Icon(Icons.flag, size: 20, color: AppTheme.textMuted),
-                        title: Text(name, style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textPrimary)),
-                        subtitle: Text(code, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMuted)),
-                        onTap: () {
-                          _destController.text = name;
-                          setState(() {
-                            _selectedCountryCode = code;
-                            _countrySuggestions = [];
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ),
 
               const SizedBox(height: 24),
 

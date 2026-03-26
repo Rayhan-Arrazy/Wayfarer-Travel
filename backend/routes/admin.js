@@ -208,4 +208,39 @@ router.delete('/trips/:id', async (req, res) => {
   }
 });
 
+// @route   GET /api/admin/journals
+// @desc    Get all journal entries (admin view)
+router.get('/journals', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+
+    const total = await JournalEntry.countDocuments();
+    const journals = await JournalEntry.find()
+      .populate('userId', 'name email')
+      .populate('tripId', 'destination')
+      .sort({ date: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    res.json({ journals, total, page, pages: Math.ceil(total / limit) });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/admin/journals/:id
+// @desc    Delete journal entry
+router.delete('/journals/:id', async (req, res) => {
+  try {
+    const journal = await JournalEntry.findByIdAndDelete(req.params.id);
+    if (!journal) {
+      return res.status(404).json({ message: 'Journal entry not found' });
+    }
+    res.json({ message: 'Journal entry deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

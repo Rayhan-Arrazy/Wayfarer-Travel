@@ -180,6 +180,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Map<String, dynamic>? _stats;
   List<dynamic> _trips = [];
   List<dynamic> _users = [];
+  List<dynamic> _journals = [];
   
   late Dio _dio;
 
@@ -207,10 +208,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _users = usersRes.data['users'] ?? [];
           _isLoading = false;
         });
+        
+        // Fetch remaining data in background
+        _fetchExtraData();
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _fetchExtraData() async {
+    try {
+      final journalsRes = await _dio.get('/admin/journals');
+      if (mounted) {
+        setState(() {
+          _journals = journalsRes.data['journals'] ?? [];
+        });
+      }
+    } catch (e) {}
+  }
+
+  Future<void> _deleteJournal(String id) async {
+    try {
+      await _dio.delete('/admin/journals/$id');
+      _fetchData();
+    } catch (e) {}
   }
 
   Future<void> _deleteTrip(String id) async {
@@ -599,22 +621,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             child: Row(
               children: [
-                Expanded(flex: 3, child: Text('DESTINATION & USER', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)))),
-                Expanded(flex: 2, child: Text('STATUS', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)))),
-                Expanded(flex: 2, child: Text('BUDGET', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)))),
+                Expanded(flex: 3, child: Text(_selectedIndex == 6 ? 'TITLE & TRIP' : 'DESTINATION & USER', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)))),
+                Expanded(flex: 2, child: Text(_selectedIndex == 6 ? 'DATE' : 'STATUS', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)))),
+                Expanded(flex: 2, child: Text(_selectedIndex == 6 ? 'MOOD' : 'BUDGET', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)))),
                 SizedBox(width: 80, child: Text('ACTIONS', textAlign: TextAlign.right, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)))),
               ],
             ),
           ),
           const Divider(height: 1, color: Color(0xFFE2E8F0)),
-          ..._trips.map((trip) {
-            return Column(
-              children: [
-                _buildTripTableRow(trip, () => _deleteTrip(trip['_id'])),
-                const Divider(height: 1, color: Color(0xFFE2E8F0)),
-              ]
-            );
-          }),
+          ...(_selectedIndex == 6 ? _journals : _trips).map((item) {
+            if (_selectedIndex == 6) return _buildJournalTableRow(item, () => _deleteJournal(item['_id']));
+            return _buildTripTableRow(item, () => _deleteTrip(item['_id']));
+          }).toList(),
         ],
       ),
     );
@@ -766,6 +784,66 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Text(isActive ? 'ACTIVE' : 'INACTIVE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: isActive ? const Color(0xFF166534) : const Color(0xFF991B1B))),
               ),
             )
+          ),
+          SizedBox(
+            width: 80,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                InkWell(
+                  onTap: onDelete,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(border: Border.all(color: const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.delete, size: 16, color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+  Widget _buildJournalTableRow(dynamic journal, VoidCallback onDelete) {
+    String title = journal['title'] ?? 'Untitled Entry';
+    String trip = journal['tripId']?['destination'] ?? 'Unknown Trip';
+    String user = journal['userId']?['name'] ?? 'Unknown User';
+    String date = (journal['date'] != null) ? journal['date'].toString().substring(0, 10) : 'N/A';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                const Icon(Icons.book, color: Color(0xFFE85D04), size: 24),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46)), maxLines: 1),
+                      Text('$user • $trip', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF475569))),
+                    ],
+                  ),
+                )
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(date, style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF475569))),
+          ),
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
+              child: Text(journal['mood'] ?? 'Neutral', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF475569)), textAlign: TextAlign.center),
+            ),
           ),
           SizedBox(
             width: 80,
