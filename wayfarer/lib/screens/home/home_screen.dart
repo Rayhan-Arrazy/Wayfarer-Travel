@@ -8,6 +8,7 @@ import '../plan/plan_tab.dart';
 import '../guide/guide_tab.dart';
 import '../tools/tools_tab_screen.dart';
 import '../map/explore_tab.dart';
+import '../journal/journal_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const DashboardTab(),
     const PlanTab(),
     const GuideTab(),
+    const JournalScreen(),
     const ToolsTabScreen(),
     const ExploreTab(),
   ];
@@ -74,15 +76,15 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 32),
             _buildDrawerSection('DISCOVER'),
             _buildDrawerItem(Icons.explore_outlined, Icons.explore, 'Travel Guide', 2),
-            _buildDrawerItem(Icons.location_on_outlined, Icons.location_on, 'Explore', 4),
+            _buildDrawerItem(Icons.location_on_outlined, Icons.location_on, 'Explore', 5),
 
             const SizedBox(height: 32),
             _buildDrawerSection('UTILITIES'),
-            _buildDrawerItem(Icons.build_outlined, Icons.build, 'Tools', 3),
+            _buildDrawerItem(Icons.build_outlined, Icons.build, 'Tools', 4),
 
             const SizedBox(height: 32),
             _buildDrawerSection('MEMORIES'),
-            _buildDrawerItem(Icons.menu_book_outlined, Icons.menu_book, 'Journal', 5),
+            _buildDrawerItem(Icons.menu_book_outlined, Icons.menu_book, 'Journal', 3),
 
             const Spacer(),
             ListTile(
@@ -112,13 +114,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isActive = _currentIndex == index;
     return GestureDetector(
       onTap: () {
-        if (index < 5) {
-          setState(() => _currentIndex = index);
-          Navigator.pop(context);
-        } else if (index == 5) {
-          Navigator.pop(context);
-          Navigator.pushNamed(context, AppRoutes.journal);
-        }
+        setState(() => _currentIndex = index);
+        Navigator.pop(context);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -126,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: isActive ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: isActive ? [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))] : null,
+          boxShadow: isActive ? [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))] : null,
         ),
         child: Row(
           children: [
@@ -144,18 +141,22 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey.shade100)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, -4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, -4))],
       ),
       padding: const EdgeInsets.only(top: 12, bottom: 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(Icons.home_outlined, Icons.home, 'HOME', 0),
-          _buildNavItem(Icons.calendar_today_outlined, Icons.calendar_today, 'PLAN', 1),
-          _buildNavItem(Icons.explore_outlined, Icons.explore, 'GUIDE', 2),
-          _buildNavItem(Icons.build_outlined, Icons.build, 'TOOLS', 3),
-          _buildNavItem(Icons.search_outlined, Icons.search, 'EXPLORE', 4),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(Icons.home_outlined, Icons.home, 'HOME', 0),
+            _buildNavItem(Icons.calendar_today_outlined, Icons.calendar_today, 'PLAN', 1),
+            _buildNavItem(Icons.explore_outlined, Icons.explore, 'GUIDE', 2),
+            _buildNavItem(Icons.book_outlined, Icons.book, 'JOURNAL', 3),
+            _buildNavItem(Icons.build_outlined, Icons.build, 'TOOLS', 4),
+            _buildNavItem(Icons.search_outlined, Icons.search, 'EXPLORE', 5),
+          ],
+        ),
       ),
     );
   }

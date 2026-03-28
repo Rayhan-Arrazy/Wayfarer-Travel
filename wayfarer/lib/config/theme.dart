@@ -162,6 +162,11 @@ class AppTheme {
         prefixIconColor: textMuted,
       ),
       dividerTheme: const DividerThemeData(color: lightBorder, thickness: 1),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: primaryColor,
+        refreshBackgroundColor: Colors.white,
+        strokeWidth: 3,
+      ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: lightCard,
         selectedItemColor: primaryColor,

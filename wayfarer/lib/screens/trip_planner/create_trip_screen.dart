@@ -34,8 +34,22 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        leading: IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close, color: Color(0xFF1E2E46))),
+        leadingWidth: 100,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.only(left: 24, top: 10, bottom: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5),
+            ),
+            child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
+          ),
+        ),
         title: Text('WAYFARER', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFF1E2E46), letterSpacing: 1.0)),
+        titleSpacing: 0,
+        centerTitle: false,
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 16.0),

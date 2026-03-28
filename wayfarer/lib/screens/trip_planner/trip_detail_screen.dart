@@ -144,9 +144,18 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          margin: const EdgeInsets.only(left: 20, top: 10),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5),
+                          ),
+                          child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.more_horiz, color: Colors.white),

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../providers/trip_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../models/trip_model.dart';
 import '../../config/routes.dart';
+import '../../widgets/loading_widget.dart';
 
 class PlanTab extends StatefulWidget {
   const PlanTab({super.key});
@@ -12,7 +16,6 @@ class PlanTab extends StatefulWidget {
 }
 
 class _PlanTabState extends State<PlanTab> {
-
   @override
   void initState() {
     super.initState();
@@ -24,25 +27,29 @@ class _PlanTabState extends State<PlanTab> {
   @override
   Widget build(BuildContext context) {
     final tripProvider = context.watch<TripProvider>();
-    final activeTrip = tripProvider.upcomingTrip;
-    
-    // Using hardcoded data from image if no active trip to match pixel-perfection
-    final String budget = activeTrip != null ? '\$${activeTrip.budget.amount.toStringAsFixed(2)}' : '\$2,450.00';
-    final String remaining = '\$842.15';
-    final String tripName = activeTrip?.destination ?? 'Scandinavia Trip';
+    final auth = context.watch<AuthProvider>();
+    final trips = tripProvider.trips;
+
+    if (tripProvider.isLoading) return const LoadingWidget();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         leading: IconButton(
           onPressed: () => Scaffold.of(context).openDrawer(),
           icon: const Icon(Icons.menu, color: Color(0xFF132F5C)),
         ),
-        title: Text('The Wayfarer', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF1D4E89))),
+        title: Text('Wayfarer', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF1D4E89))),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.person, color: Color(0xFF132F5C))),
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundImage: NetworkImage(auth.user?.avatar ?? 'https://i.pravatar.cc/150?u=alex'),
+            ),
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -50,137 +57,180 @@ class _PlanTabState extends State<PlanTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('CURRENT TRIP BUDGET', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.0)),
+            Text('WORKSPACE', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.0)),
             const SizedBox(height: 8),
-            Text(budget, style: GoogleFonts.outfit(fontSize: 48, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C))),
-            const SizedBox(height: 4),
-            Text('Total allocation for $tripName', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
-            
-            const SizedBox(height: 32),
-            
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9).withOpacity(0.5),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   Text('REMAINING', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.0)),
-                   const SizedBox(height: 8),
-                   Text(remaining, style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                   const SizedBox(height: 16),
-                   Stack(
-                     children: [
-                       Container(height: 8, decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(4))),
-                       FractionallySizedBox(
-                         widthFactor: 0.65,
-                         child: Container(height: 8, decoration: BoxDecoration(color: const Color(0xFF132F5C), borderRadius: BorderRadius.circular(4))),
-                       ),
-                     ],
-                   ),
-                ],
-              ),
-            ),
-
+            Text('Trip Planning Hub', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
             const SizedBox(height: 24),
-
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9).withOpacity(0.5),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Daily Average', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                  const SizedBox(height: 16),
-                  Text('\$112.40', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C))),
-                  const SizedBox(height: 8),
-                  Text('Based on the last 14 days of travel.', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF132F5C),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: Color(0xFFE2E8F0))),
-                      ),
-                      child: Text('View Analytics', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
+            
+            _buildNewJourneyButton(context),
+            
             const SizedBox(height: 32),
-
+            _buildHubCard(
+              context, 
+              Icons.alt_route, 
+              'Itinerary Maker', 
+              'Map out your daily activities', 
+              () => Navigator.pushNamed(context, AppRoutes.itinerary)
+            ),
+            const SizedBox(height: 16),
+            _buildHubCard(
+              context, 
+              Icons.account_balance_wallet_outlined, 
+              'Budgeter', 
+              'Track expenses and savings', 
+              () => Navigator.pushNamed(context, AppRoutes.budgeter)
+            ),
+            
+            const SizedBox(height: 48),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Recent Entries', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: const Color(0xFFDBEAFE), borderRadius: BorderRadius.circular(8)),
-                  child: Text('JULY 2024', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF1E40AF))),
-                ),
+                const Icon(Icons.airplanemode_active, color: Color(0xFF1D4E89), size: 20),
+                const SizedBox(width: 12),
+                Text('Active & Upcoming Trips', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
               ],
             ),
             const SizedBox(height: 24),
-
-            _buildEntryItem('Dinner - Stockholm Bistro', '\$54.20', 'Today, 8:15 PM'),
-            _buildEntryItem('Museum Entrance - Vasa', '\$18.00', 'Today, 2:30 PM'),
-            _buildEntryItem('Train Ticket - SJ Rail', '\$125.50', 'Yesterday, 9:00 AM'),
-            _buildEntryItem('Morning Coffee', '\$6.50', 'Yesterday, 8:15 AM'),
-            _buildEntryItem('Grocery Store - ICA', '\$32.10', 'July 12, 6:45 PM'),
-
-            const SizedBox(height: 32),
-            Center(
-              child: TextButton(
-                onPressed: () {},
-                child: Text('Load More Transactions', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C))),
-              ),
-            ),
+            
+            if (trips.isEmpty)
+              _buildEmptyTrips()
+            else
+              ...trips.map((trip) => _buildTripCard(context, trip)),
+            
             const SizedBox(height: 100),
           ],
-        ),
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 24.0),
-        child: FloatingActionButton(
-          onPressed: () => Navigator.pushNamed(context, AppRoutes.budgeter),
-          backgroundColor: const Color(0xFF132F5C),
-          child: const Icon(Icons.add, color: Colors.white),
         ),
       ),
     );
   }
 
-  Widget _buildEntryItem(String title, String amount, String date) {
+  Widget _buildNewJourneyButton(BuildContext context) {
+    return SizedBox(
+      width: 220,
+      height: 52,
+      child: ElevatedButton.icon(
+        onPressed: () => Navigator.pushNamed(context, AppRoutes.createTrip),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: Text('New Journey', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF4A6083),
+          elevation: 4,
+          shadowColor: const Color(0xFF1E2E46).withValues(alpha: 0.3),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHubCard(BuildContext context, IconData icon, String title, String subtitle, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF1F5F9)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: const Color(0xFF1E40AF), size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Color(0xFFCBD5E1)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTripCard(BuildContext context, TripModel trip) {
+    String dateRange = "Dates TBD";
+    // Check trip.startDate and trip.endDate exist
+    dateRange = "${DateFormat('MMM d').format(trip.startDate)} — ${DateFormat('MMM d, y').format(trip.endDate)}";
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
-                const SizedBox(height: 4),
-                Text(date, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8))),
+                Text(trip.destination, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today, size: 14, color: Color(0xFF64748B)),
+                    const SizedBox(width: 8),
+                    Text(dateRange, style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
+                  ],
+                ),
               ],
             ),
           ),
-          Text(amount, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+          IconButton(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.editTrip, arguments: trip),
+            icon: const Icon(Icons.edit_outlined, color: Color(0xFF64748B)),
+          ),
+          IconButton(
+            onPressed: () => _confirmDelete(context, trip.id),
+            icon: const Icon(Icons.delete_outline, color: Color(0xFF64748B)),
+          ),
         ],
       ),
     );
+  }
+
+  Widget _buildEmptyTrips() {
+    return Center(
+      child: Column(
+        children: [
+          Icon(Icons.map_outlined, size: 64, color: Colors.grey.shade200),
+          const SizedBox(height: 16),
+          Text('No trips planned yet', style: GoogleFonts.inter(color: Colors.grey.shade400, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Trip?'),
+        content: const Text('This action will permanently remove this trip and its itinerary.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCEL')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('DELETE', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      final provider = context.read<TripProvider>();
+      await provider.deleteTrip(id);
+    }
   }
 }

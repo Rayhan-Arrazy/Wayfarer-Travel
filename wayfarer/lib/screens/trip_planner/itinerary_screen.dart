@@ -42,8 +42,22 @@ class _ItineraryScreenState extends State<ItineraryScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        leading: const Icon(Icons.menu, color: AppTheme.primaryColor),
-        title: Text('The Wayfarer', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+        leadingWidth: 100,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.only(left: 24, top: 10, bottom: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5),
+            ),
+            child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
+          ),
+        ),
+        title: Text('Trip Budget', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: const Color(0xFF1E2E46))),
+        titleSpacing: 0,
+        centerTitle: false,
         actions: [
           IconButton(onPressed: () {}, icon: const Icon(Icons.search, color: AppTheme.primaryColor)),
           const Padding(
@@ -133,7 +147,6 @@ class _ItineraryScreenState extends State<ItineraryScreen> {
         backgroundColor: const Color(0xFF1E2E46),
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -158,21 +171,4 @@ class _ItineraryScreenState extends State<ItineraryScreen> {
     Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityFormScreen()));
   }
 
-  Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: 1, // PLAN
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFF1E2E46),
-      unselectedItemColor: const Color(0xFF94A3B8),
-      selectedLabelStyle: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold),
-      unselectedLabelStyle: GoogleFonts.inter(fontSize: 10),
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'HOME'),
-        BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'PLAN'),
-        BottomNavigationBarItem(icon: Icon(Icons.room_outlined), label: 'GUIDE'),
-        BottomNavigationBarItem(icon: Icon(Icons.build_outlined), label: 'TOOLS'),
-        BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), label: 'EXPLORE'),
-      ],
-    );
-  }
 }

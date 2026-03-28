@@ -106,8 +106,22 @@ class _EditTripScreenState extends State<EditTripScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        leading: IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back, color: Color(0xFF1E2E46))),
+        leadingWidth: 100,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.only(left: 24, top: 10, bottom: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5),
+            ),
+            child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
+          ),
+        ),
         title: Text('Edit Trip', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+        titleSpacing: 0,
+        centerTitle: false,
         backgroundColor: Colors.white,
         elevation: 0,
       ),

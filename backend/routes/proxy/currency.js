@@ -16,8 +16,8 @@ router.get('/rates', async (req, res) => {
       if (to) params.to = to;
       
       data = await callWithFallback(
-        () => axiosGet(`https://api.frankfurter.dev/latest`, { params }),
-        () => axiosGet(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${(from || 'usd').toLowerCase()}.json`),
+        () => axiosGet(`https://api.frankfurter.app/latest`, { params }),
+        () => axiosGet(`https://latest.currency-api.pages.dev/v1/currencies/${(from || 'usd').toLowerCase()}.json`),
         'Currency'
       );
       setCache(cacheKey, data);
@@ -43,8 +43,8 @@ router.get('/convert', async (req, res) => {
     
     if (!rateData) {
       rateData = await callWithFallback(
-        () => axiosGet(`https://api.frankfurter.dev/latest`, { params: { from, to } }),
-        () => axiosGet(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${from.toLowerCase()}.json`),
+        () => axiosGet(`https://api.frankfurter.app/latest`, { params: { from, to } }),
+        () => axiosGet(`https://latest.currency-api.pages.dev/v1/currencies/${from.toLowerCase()}.json`),
         'Currency Convert'
       );
       setCache(cacheKey, rateData);

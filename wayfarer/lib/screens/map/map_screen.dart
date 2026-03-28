@@ -160,6 +160,19 @@ class _MapScreenState extends State<MapScreen> {
                 ),
                 child: Row(
                   children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        margin: const EdgeInsets.only(left: 12),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5),
+                        ),
+                        child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
+                      ),
+                    ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
                       child: Icon(Icons.search, color: Color(0xFF64748B)),

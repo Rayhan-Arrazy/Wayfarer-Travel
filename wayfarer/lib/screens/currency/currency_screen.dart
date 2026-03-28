@@ -201,7 +201,15 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                   children: [
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: const Icon(Icons.menu, color: Colors.white, size: 24),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5),
+                        ),
+                        child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Text('Wayfarer', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),

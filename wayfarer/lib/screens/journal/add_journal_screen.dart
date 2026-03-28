@@ -6,6 +6,7 @@ import '../../providers/journal_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../models/journal_model.dart';
+import '../../widgets/loading_widget.dart';
 
 class AddJournalScreen extends StatefulWidget {
   const AddJournalScreen({super.key});
@@ -83,13 +84,28 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) return const LoadingWidget();
     final dateStr = DateFormat('MMMM d, yyyy').format(DateTime.now());
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        leading: IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close, color: Color(0xFF1E2E46))),
+        leadingWidth: 100,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.only(left: 24, top: 10, bottom: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5),
+            ),
+            child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
+          ),
+        ),
         title: Text('Wayfarer', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFF1E2E46))),
+        titleSpacing: 0,
+        centerTitle: false,
         actions: [
           TextButton(
             onPressed: _handlePublish,
@@ -100,7 +116,7 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: _isLoading ? const Center(child: CircularProgressIndicator()) : SingleChildScrollView(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,15 +134,15 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.calendar_today, color: Color(0xFF1E40AF), size: 20),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("TODAY'S DATE", style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))),
-                      Text(dateStr, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1E40AF))),
-                    ],
-                  ),
+                   const Icon(Icons.calendar_today, color: Color(0xFF1E40AF), size: 20),
+                   const SizedBox(width: 16),
+                   Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Text("TODAY'S DATE", style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))),
+                       Text(dateStr, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1E40AF))),
+                     ],
+                   ),
                 ],
               ),
             ),

@@ -6,6 +6,8 @@ import '../../providers/journal_provider.dart';
 import '../../models/journal_model.dart';
 import '../../config/routes.dart';
 
+import '../../widgets/loading_widget.dart';
+
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
 
@@ -32,7 +34,7 @@ class _JournalScreenState extends State<JournalScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         leading: IconButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Scaffold.of(context).openDrawer(),
           icon: const Icon(Icons.menu, color: Color(0xFF132F5C)),
         ),
         title: Text('Wayfarer', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF1D4E89))),
@@ -43,7 +45,7 @@ class _JournalScreenState extends State<JournalScreen> {
         ],
       ),
       body: journalProvider.isLoading 
-        ? const Center(child: CircularProgressIndicator()) 
+        ? const LoadingWidget() 
         : SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -55,11 +57,11 @@ class _JournalScreenState extends State<JournalScreen> {
                 const SizedBox(height: 48),
 
                 if (entries.isEmpty) ...[
-                  _buildSampleEntry('October 24, 2023', '08:45 AM', 'Kyoto International, Japan', 'The mist over the Kamo River this morning felt like a quiet invitation. Everything is deliberate here—the way the tea is poured, the way the moss grows on the temple stones. I found a small stationery shop in Gion that smelled of cedar and old paper.', ['#reflections', '#culture']),
-                  _buildSampleEntry('October 22, 2023', '11:12 PM', 'Shinjuku Night Market', 'Electric blue and neon pink reflected in puddles. The city doesn\'t sleep; it just hums at a higher frequency. The best ramen I\'ve ever had was served through a wooden slot by someone I never saw. Efficiency as an art form.', []),
-                  _buildSampleEntry('October 20, 2023', '06:00 AM', 'Narita Transit Terminal', 'Touchdown. The air is crisp and carries a hint of something metallic and cold. My journal is empty, waiting for the ink of the next fourteen days. The weight of the backpack feels right—a home I carry on my shoulders.', []),
+                  _buildSampleEntry(context, 'October 24, 2023', '08:45 AM', 'Kyoto International, Japan', 'The mist over the Kamo River this morning felt like a quiet invitation. Everything is deliberate here—the way the tea is poured, the way the moss grows on the temple stones. I found a small stationery shop in Gion that smelled of cedar and old paper.', ['#reflections', '#culture']),
+                  _buildSampleEntry(context, 'October 22, 2023', '11:12 PM', 'Shinjuku Night Market', 'Electric blue and neon pink reflected in puddles. The city doesn\'t sleep; it just hums at a higher frequency. The best ramen I\'ve ever had was served through a wooden slot by someone I never saw. Efficiency as an art form.', []),
+                  _buildSampleEntry(context, 'October 20, 2023', '06:00 AM', 'Narita Transit Terminal', 'Touchdown. The air is crisp and carries a hint of something metallic and cold. My journal is empty, waiting for the ink of the next fourteen days. The weight of the backpack feels right—a home I carry on my shoulders.', []),
                 ] else ...[
-                   ...entries.map((e) => _buildJournalItem(e)),
+                   ...entries.map((e) => _buildJournalItem(context, e)),
                 ],
 
                 const SizedBox(height: 48),
@@ -76,7 +78,6 @@ class _JournalScreenState extends State<JournalScreen> {
               ],
             ),
           ),
-      bottomNavigationBar: _buildSubNav(),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 24.0),
         child: FloatingActionButton(
@@ -88,38 +89,42 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  Widget _buildJournalItem(JournalEntryModel entry) {
+  Widget _buildJournalItem(BuildContext context, JournalEntryModel entry) {
     final dateStr = DateFormat('MMMM d, y').format(entry.createdAt);
     final timeStr = DateFormat('hh:mm a').format(entry.createdAt);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 48),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(dateStr, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C))),
-              Text(timeStr, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8))),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(Icons.location_on, size: 16, color: Color(0xFF132F5C)),
-              const SizedBox(width: 8),
-              Text(entry.location?.name ?? 'Unknown Location', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(entry.note, style: GoogleFonts.inter(fontSize: 15, color: const Color(0xFF475569), height: 1.6)),
-        ],
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.journalEdit, arguments: entry),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 48),
+        color: Colors.transparent, // For better hit testing
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(dateStr, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C))),
+                Text(timeStr, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8))),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.location_on, size: 16, color: Color(0xFF132F5C)),
+                const SizedBox(width: 8),
+                Text(entry.location?.name ?? 'Unknown Location', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(entry.note, style: GoogleFonts.inter(fontSize: 15, color: const Color(0xFF475569), height: 1.6)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSampleEntry(String date, String time, String location, String note, List<String> tags) {
+  Widget _buildSampleEntry(BuildContext context, String date, String time, String location, String note, List<String> tags) {
     return Container(
       margin: const EdgeInsets.only(bottom: 48),
       child: Column(
@@ -151,36 +156,6 @@ class _JournalScreenState extends State<JournalScreen> {
           ],
         ],
       ),
-    );
-  }
-
-  Widget _buildSubNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade100)),
-      ),
-      padding: const EdgeInsets.only(top: 12, bottom: 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildSubNavItem(Icons.book, 'Timeline', true),
-          _buildSubNavItem(Icons.add_circle_outline, 'New Entry', false),
-          _buildSubNavItem(Icons.explore_outlined, 'Explore', false),
-          _buildSubNavItem(Icons.bookmark_outline, 'Journal', false),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSubNavItem(IconData icon, String label, bool active) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: active ? const Color(0xFF1E40AF) : const Color(0xFF64748B), size: 22),
-        const SizedBox(height: 4),
-        Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: active ? FontWeight.bold : FontWeight.w500, color: active ? const Color(0xFF1E40AF) : const Color(0xFF64748B))),
-      ],
     );
   }
 }

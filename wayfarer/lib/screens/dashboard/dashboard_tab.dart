@@ -8,6 +8,7 @@ import '../../providers/journal_provider.dart';
 import '../../config/routes.dart';
 import '../../models/trip_model.dart';
 import '../../models/journal_model.dart';
+import '../../widgets/loading_widget.dart';
 
 class DashboardTab extends StatefulWidget {
   const DashboardTab({super.key});
@@ -22,29 +23,23 @@ class _DashboardTabState extends State<DashboardTab> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchData();
+      context.read<TripProvider>().fetchTrips();
+      context.read<JournalProvider>().fetchEntries();
     });
-  }
-
-  Future<void> _fetchData() async {
-    final tp = context.read<TripProvider>();
-    final jp = context.read<JournalProvider>();
-    await tp.fetchTrips();
-    if (tp.upcomingTrip != null) {
-      await jp.fetchEntries(tripId: tp.upcomingTrip!.id);
-    } else {
-      await jp.fetchEntries();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final tripProvider = context.watch<TripProvider>();
-    final journalProvider = context.watch<JournalProvider>();
-    
-    final activeTrip = tripProvider.upcomingTrip;
-    final recentMemory = journalProvider.entries.isNotEmpty ? journalProvider.entries.first : null;
+    final tp = context.watch<TripProvider>();
+    final jp = context.watch<JournalProvider>();
+
+    if (tp.isLoading || jp.isLoading) {
+      return const LoadingWidget();
+    }
+
+    final activeTrip = tp.upcomingTrip;
+    final recentMemory = jp.entries.isNotEmpty ? jp.entries.first : null;
     final userName = auth.user?.name.split(' ').first ?? 'Elias';
     final dateStr = DateFormat('EEEE, MMM d').format(DateTime.now()).toUpperCase();
 
@@ -136,7 +131,7 @@ class _DashboardTabState extends State<DashboardTab> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
           border: Border.all(color: const Color(0xFFF1F5F9)),
         ),
         child: Column(
@@ -183,7 +178,7 @@ class _DashboardTabState extends State<DashboardTab> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: const Color(0xFFF1F5F9)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,7 +274,7 @@ class _DashboardTabState extends State<DashboardTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '"${memory.note.length > 150 ? memory.note.substring(0, 147) + '...' : memory.note}"',
+                '"${memory.note.length > 150 ? '${memory.note.substring(0, 147)}...' : memory.note}"',
                 style: GoogleFonts.inter(fontSize: 18, color: const Color(0xFF475569), height: 1.6, fontStyle: FontStyle.italic),
               ),
               const SizedBox(height: 24),
