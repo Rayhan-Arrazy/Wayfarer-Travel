@@ -41,11 +41,6 @@ class TripProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         _trips = (response.data as List).map((t) => TripModel.fromJson(t)).toList();
-        
-        // Determine the "upcoming" trip intelligently:
-        // 1. Prefer active trips (currently ongoing)
-        // 2. Then planning trips closest to departure
-        // 3. Fall back to the most recent trip
         _upcomingTrip = _findUpcomingTrip();
       }
     } catch (e) {
@@ -58,29 +53,90 @@ class TripProvider with ChangeNotifier {
 
   TripModel? _findUpcomingTrip() {
     if (_trips.isEmpty) return null;
-
-    // First: active trips
     final active = _trips.where((t) => t.isActive).toList();
     if (active.isNotEmpty) {
       active.sort((a, b) => a.startDate.compareTo(b.startDate));
       return active.first;
     }
-
-    // Second: planning trips sorted by nearest start date
     final planning = _trips.where((t) => t.isPlanning).toList();
     if (planning.isNotEmpty) {
       planning.sort((a, b) => a.startDate.compareTo(b.startDate));
       return planning.first;
     }
-
-    // Third: most recently completed
     final completed = _trips.where((t) => t.isCompleted).toList();
     if (completed.isNotEmpty) {
       completed.sort((a, b) => b.endDate.compareTo(a.endDate));
       return completed.first;
     }
-
     return _trips.first;
+  }
+
+  Future<bool> createTrip(TripModel trip) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.tokenKey);
+      if (token == null) return false;
+
+      final response = await _dio.post(
+        '/trips',
+        data: trip.toJson(),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 201) {
+        await fetchTrips();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error creating trip: $e');
+      return false;
+    }
+  }
+
+  Future<bool> updateTrip(String id, TripModel trip) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.tokenKey);
+      if (token == null) return false;
+
+      final response = await _dio.put(
+        '/trips/$id',
+        data: trip.toJson(),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        await fetchTrips();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error updating trip: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteTrip(String id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.tokenKey);
+      if (token == null) return false;
+
+      final response = await _dio.delete(
+        '/trips/$id',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        await fetchTrips();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error deleting trip: $e');
+      return false;
+    }
   }
 
   void setUpcomingTrip(TripModel trip) {

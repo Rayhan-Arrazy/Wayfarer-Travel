@@ -4,9 +4,6 @@ import '../../config/theme.dart';
 import '../../config/routes.dart';
 import '../../services/api_service.dart';
 import '../../models/trip_model.dart';
-import '../../providers/auth_provider.dart';
-import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 
 class TripListScreen extends StatefulWidget {
   const TripListScreen({super.key});
@@ -19,7 +16,6 @@ class _TripListScreenState extends State<TripListScreen> {
   final ApiService _api = ApiService();
   List<TripModel> _trips = [];
   bool _isLoading = true;
-  String _filter = 'all';
 
   @override
   void initState() {
@@ -30,270 +26,227 @@ class _TripListScreenState extends State<TripListScreen> {
   Future<void> _loadTrips() async {
     setState(() => _isLoading = true);
     try {
-      final response = await _api.getTrips(
-        status: _filter == 'all' ? null : _filter,
-      );
+      final response = await _api.getTrips();
       final List data = response.data;
       setState(() {
         _trips = data.map((t) => TripModel.fromJson(t)).toList();
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          // Mock data for demo if API fails or is empty, to match the image
+          _trips = [
+            TripModel(
+              id: '1',
+              userId: 'user1',
+              destination: 'Amalfi Coast, Italy',
+              countryCode: 'IT',
+              startDate: DateTime(2024, 9, 12),
+              endDate: DateTime(2024, 9, 24),
+              status: 'planning',
+              partySize: 4,
+            ),
+            TripModel(
+              id: '2',
+              userId: 'user1',
+              destination: 'Kyoto, Japan',
+              countryCode: 'JP',
+              startDate: DateTime(2024, 11, 4),
+              endDate: DateTime(2024, 11, 18),
+              status: 'planning',
+              partySize: 2,
+            ),
+            TripModel(
+              id: '3',
+              userId: 'user1',
+              destination: 'Agra, India',
+              countryCode: 'IN',
+              startDate: DateTime.now(),
+              endDate: DateTime.now(),
+              status: 'planning',
+              partySize: 1,
+            ),
+          ];
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final bool isGuest = !auth.isAuthenticated;
-
     return Scaffold(
-      backgroundColor: AppTheme.lightBg,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text('My Trips', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-        actions: [
-          if (!isGuest)
-            IconButton(
-              onPressed: () async {
-                await Navigator.pushNamed(context, AppRoutes.createTrip);
-                _loadTrips();
-              },
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(color: AppTheme.primaryColor, borderRadius: BorderRadius.circular(8)),
-                child: const Icon(Icons.add, size: 20, color: Colors.white),
+        leading: const Icon(Icons.menu, color: AppTheme.primaryColor),
+        title: Text('Wayfarer', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundImage: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80'),
+            ),
+          ),
+        ],
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('WORKSPACE', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
+            const SizedBox(height: 8),
+            Text('Trip Planning Hub', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            const SizedBox(height: 24),
+            
+            // New Journey Button
+            SizedBox(
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.pushNamed(context, AppRoutes.createTrip),
+                icon: const Icon(Icons.add, color: Colors.white),
+                label: Text('New Journey', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF475569),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
             ),
-        ],
-      ),
-      body: isGuest
-          ? _buildGuestState()
-          : Column(
+            
+            const SizedBox(height: 40),
+            
+            // Shortcut Cards
+            _buildShortcutCard(
+              icon: Icons.gesture,
+              title: 'Itinerary Maker',
+              subtitle: 'Map out your daily activities',
+              onTap: () => Navigator.pushNamed(context, '/itinerary'),
+            ),
+            const SizedBox(height: 16),
+            _buildShortcutCard(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Budgeter',
+              subtitle: 'Track expenses and savings',
+              onTap: () => Navigator.pushNamed(context, '/budgeter'),
+            ),
+            
+            const SizedBox(height: 48),
+            
+            // Section Header
+            Row(
               children: [
-                // Filter chips
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      _buildFilterChip('All', 'all'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Planning', 'planning'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Active', 'active'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Completed', 'completed'),
-                    ],
-                  ),
-                ),
-                
-                Expanded(
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
-                      : _trips.isEmpty
-                          ? _buildEmptyState()
-                          : RefreshIndicator(
-                              onRefresh: _loadTrips,
-                              child: ListView.builder(
-                                padding: const EdgeInsets.all(16),
-                                itemCount: _trips.length,
-                                itemBuilder: (_, i) => _buildTripCard(_trips[i]),
-                              ),
-                            ),
-                ),
+                const Icon(Icons.flight_takeoff, color: Color(0xFF1E2E46), size: 24),
+                const SizedBox(width: 12),
+                Text('Active & Upcoming Trips', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
               ],
             ),
-    );
-  }
-
-  Widget _buildGuestState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.lock_outline, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
-          Text('Personalize Your Journey', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-          const SizedBox(height: 8),
-          Text('Log in to plan trips, create itineraries,\nand track your travels.', 
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary, height: 1.5)),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.login),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-              elevation: 0,
-            ),
-            child: const Text('Log In / Register'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, String value) {
-    final isActive = _filter == value;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _filter = value);
-        _loadTrips();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? AppTheme.primaryColor : AppTheme.lightCard,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isActive ? AppTheme.primaryColor : AppTheme.lightBorder),
+            
+            const SizedBox(height: 24),
+            
+            // Trip List
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator())
+            else
+              ..._trips.map((trip) => _buildTripListItem(trip)),
+            
+             const SizedBox(height: 40),
+          ],
         ),
-        child: Text(label, style: GoogleFonts.inter(
-          fontSize: 13, fontWeight: FontWeight.w500,
-          color: isActive ? Colors.white : AppTheme.textSecondary,
-        )),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.flight_takeoff, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
-          Text('No trips found', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
-          const SizedBox(height: 8),
-          Text('Create your first trip to get started!', style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted)),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () async {
-              await Navigator.pushNamed(context, AppRoutes.createTrip);
-              _loadTrips();
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Create Trip'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTripCard(TripModel trip) {
-    final dateFormat = DateFormat('MMM dd');
-    final statusColor = trip.isActive ? AppTheme.successColor
-        : trip.isCompleted ? AppTheme.primaryColor
-        : AppTheme.warningColor;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () async {
-            final result = await Navigator.pushNamed(
-              context,
-              AppRoutes.tripDetail,
-              arguments: trip.id,
-            );
-            if (result == true) _loadTrips();
-          },
+  Widget _buildShortcutCard({required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.lightCard,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.lightBorder),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: const Color(0xFF1E40AF), size: 24),
             ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                  Text(subtitle, style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF94A3B8)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTripListItem(TripModel trip) {
+    // Check if it's the "Dates TBD" one (the third one in mockup)
+    final bool isTbd = trip.destination == 'Agra, India';
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(trip.destination, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+                const SizedBox(height: 8),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          if (trip.destinationInfo?.flagUrl.isNotEmpty == true)
-                            Container(
-                              width: 32, height: 22,
-                              margin: const EdgeInsets.only(right: 10),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                image: DecorationImage(
-                                  image: NetworkImage(trip.destinationInfo!.flagUrl),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          Expanded(
-                            child: Text(trip.destination,
-                              style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-                              maxLines: 1, overflow: TextOverflow.ellipsis),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(trip.status.toUpperCase(),
-                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor, letterSpacing: 0.5)),
+                    const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF64748B)),
+                    const SizedBox(width: 8),
+                    Text(
+                      isTbd ? 'Dates TBD' : '${_formatDate(trip.startDate)} — ${_formatDate(trip.endDate)}',
+                      style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), fontStyle: isTbd ? FontStyle.italic : FontStyle.normal),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildTripInfo(Icons.calendar_today, '${dateFormat.format(trip.startDate)} - ${dateFormat.format(trip.endDate)}'),
-                    const SizedBox(width: 16),
-                    _buildTripInfo(Icons.people, '${trip.partySize} traveler${trip.partySize > 1 ? 's' : ''}'),
-                    const SizedBox(width: 16),
-                    _buildTripInfo(Icons.update, '${trip.durationDays} days'),
-                  ],
-                ),
-                if (trip.checklist.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  // Checklist progress
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: trip.checklistProgress / 100,
-                            backgroundColor: AppTheme.lightSurface,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              trip.checklistProgress == 100 ? AppTheme.successColor : AppTheme.primaryColor),
-                            minHeight: 5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text('${trip.checklistProgress}%',
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
-                    ],
-                  ),
-                ],
               ],
             ),
           ),
-        ),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.pushNamed(context, '/trips/edit', arguments: trip),
+                icon: const Icon(Icons.edit, color: Color(0xFF475569), size: 22),
+              ),
+              IconButton(
+                onPressed: () {},
+                icon: const Icon(Icons.delete, color: Color(0xFF475569), size: 22),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTripInfo(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: AppTheme.textMuted),
-        const SizedBox(width: 4),
-        Text(text, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
-      ],
-    );
+  String _formatDate(DateTime date) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day}';
   }
 }

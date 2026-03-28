@@ -58,6 +58,19 @@ const tripSchema = new mongoose.Schema({
     amount: { type: Number, default: 0 },
     currency: { type: String, default: 'USD' },
   },
+  expenses: [{
+    title: { type: String, required: true },
+    amount: { type: Number, required: true },
+    date: { type: Date, default: Date.now },
+    category: { type: String, default: 'General' },
+  }],
+  itinerary: [{
+    title: { type: String, required: true },
+    time: { type: String },
+    date: { type: Date },
+    location: { type: String },
+    checked: { type: Boolean, default: false },
+  }],
   destinationInfo: {
     currency: String,
     language: String,

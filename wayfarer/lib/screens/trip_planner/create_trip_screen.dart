@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:dio/dio.dart';
-import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/theme.dart';
-import '../../services/api_service.dart';
 
-// Use package-absolute or local definitions for Admin Panel.
-// Do not use relative imports to mobile app directories.ive screens or providers here.
 class CreateTripScreen extends StatefulWidget {
   const CreateTripScreen({super.key});
 
@@ -16,353 +10,258 @@ class CreateTripScreen extends StatefulWidget {
 }
 
 class _CreateTripScreenState extends State<CreateTripScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _destController = TextEditingController();
-  final _notesController = TextEditingController();
-  final _budgetController = TextEditingController();
-  final ApiService _api = ApiService();
+  final _destinationController = TextEditingController();
+  final _departureController = TextEditingController();
+  final _returnController = TextEditingController();
   
-  DateTime _startDate = DateTime.now().add(const Duration(days: 7));
-  DateTime _endDate = DateTime.now().add(const Duration(days: 14));
-  int _partySize = 1;
-  String _selectedCountryCode = '';
-  bool _isLoading = false;
+  int _adults = 2;
+  int _children = 0;
+  String _selectedTripType = 'SOLO';
+
+  final List<String> _checklistItems = ['Book Flights', 'Get Visa', 'Buy Insurance'];
+  final Set<String> _selectedChecklist = {};
 
   @override
   void dispose() {
-    _destController.dispose();
-    _notesController.dispose();
-    _budgetController.dispose();
+    _destinationController.dispose();
+    _departureController.dispose();
+    _returnController.dispose();
     super.dispose();
-  }
-
-  Future<void> _selectDate(bool isStart) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: isStart ? _startDate : _endDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 730)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppTheme.primaryColor,
-              onPrimary: Colors.white,
-              surface: AppTheme.lightCard,
-              onSurface: AppTheme.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        if (isStart) {
-          _startDate = picked;
-          if (_endDate.isBefore(_startDate)) {
-            _endDate = _startDate.add(const Duration(days: 7));
-          }
-        } else {
-          _endDate = picked;
-        }
-      });
-    }
-  }
-
-  Future<void> _createTrip() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_selectedCountryCode.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a country from suggestions'), backgroundColor: AppTheme.errorColor),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      await _api.createTrip({
-        'destination': _destController.text.trim(),
-        'countryCode': _selectedCountryCode,
-        'startDate': _startDate.toIso8601String(),
-        'endDate': _endDate.toIso8601String(),
-        'partySize': _partySize,
-        'notes': _notesController.text.trim(),
-        'budget': {
-          'amount': double.tryParse(_budgetController.text) ?? 0,
-          'currency': 'USD',
-        },
-      });
-
-      if (mounted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Trip created successfully! ✈️'), backgroundColor: AppTheme.successColor),
-          );
-          Navigator.pop(context);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create trip: $e'), backgroundColor: AppTheme.errorColor),
-        );
-      }
-    }
-    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-      backgroundColor: AppTheme.lightBg,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text('Plan a Trip', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+        leading: IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close, color: Color(0xFF1E2E46))),
+        title: Text('WAYFARER', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFF1E2E46), letterSpacing: 1.0)),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundImage: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80'),
+            ),
+          ),
+        ],
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Destination section with Autocomplete
-              Text('Where are you going?', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-              const SizedBox(height: 12),
-              Autocomplete<Object>(
-                optionsBuilder: (TextEditingValue value) async {
-                  if (value.text.length < 2) return [];
-                  try {
-                    final resp = await _api.searchCountries(value.text);
-                    return (resp.data as List).cast<Object>();
-                  } catch (e) {
-                    return [];
-                  }
-                },
-                displayStringForOption: (option) => ((option as Map)['name']?['common'] ?? '').toString(),
-                fieldViewBuilder: (ctx, controller, focus, onFieldSubmitted) {
-                  return TextFormField(
-                    controller: controller,
-                    focusNode: focus,
-                    style: const TextStyle(color: AppTheme.textPrimary),
-                    decoration: const InputDecoration(
-                      labelText: 'Destination Country',
-                      prefixIcon: Icon(Icons.public, color: AppTheme.textMuted),
-                      hintText: 'e.g. Japan, France, Thailand',
-                    ),
-                    onFieldSubmitted: (v) => onFieldSubmitted(),
-                    validator: (v) => v == null || v.isEmpty ? 'Destination is required' : null,
-                  );
-                },
-                onSelected: (selection) {
-                  final sel = selection as Map;
-                  _destController.text = sel['name']?['common'] ?? '';
-                  setState(() {
-                    _selectedCountryCode = sel['cca2'] ?? '';
-                  });
-                },
-                optionsViewBuilder: (ctx, onSelected, options) {
-                  return Align(
-                    alignment: Alignment.topLeft,
-                    child: Material(
-                      elevation: 4,
-                      borderRadius: BorderRadius.circular(12),
-                      color: AppTheme.lightSurface,
-                      child: Container(
-                        width: MediaQuery.of(ctx).size.width - 40,
-                        constraints: const BoxConstraints(maxHeight: 250),
-                        child: ListView.separated(
-                          padding: EdgeInsets.zero,
-                          shrinkWrap: true,
-                          itemCount: options.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1, color: AppTheme.lightBorder),
-                          itemBuilder: (ctx, idx) {
-                            final option = options.elementAt(idx) as Map;
-                            final name = option['name']?['common'] ?? '';
-                            final flag = option['flags']?['png'] ?? '';
-                            return ListTile(
-                              leading: flag.isNotEmpty 
-                                ? Image.network(flag, width: 24, height: 16, fit: BoxFit.cover)
-                                : const Icon(Icons.flag, size: 18, color: AppTheme.textMuted),
-                              title: Text(name, style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textPrimary)),
-                              onTap: () => onSelected(option),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 24),
-
-              // Travel Dates
-              Text('Travel Dates', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDatePicker('Start Date', _startDate, () => _selectDate(true)),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildDatePicker('End Date', _endDate, () => _selectDate(false)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, size: 16, color: AppTheme.primaryColor),
-                    const SizedBox(width: 8),
-                    Text('${_endDate.difference(_startDate).inDays} days trip',
-                      style: GoogleFonts.inter(fontSize: 13, color: AppTheme.primaryColor, fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Party Size
-              Text('Party Size', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppTheme.lightSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.lightBorder),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.people, color: AppTheme.textMuted),
-                        const SizedBox(width: 12),
-                        Text('Travelers', style: GoogleFonts.inter(fontSize: 15, color: AppTheme.textPrimary)),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        _buildCounterButton(Icons.remove, () {
-                          if (_partySize > 1) setState(() => _partySize--);
-                        }),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('$_partySize', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                        ),
-                        _buildCounterButton(Icons.add, () => setState(() => _partySize++)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Budget
-              Text('Budget (optional)', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _budgetController,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Estimated Budget (USD)',
-                  prefixIcon: Icon(Icons.attach_money, color: AppTheme.textMuted),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Notes
-              Text('Notes (optional)', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _notesController,
-                maxLines: 3,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Trip notes...',
-                  prefixIcon: Icon(Icons.note, color: AppTheme.textMuted),
-                  alignLabelWithHint: true,
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Create button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _createTrip,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                      : Text('Create Trip ✈️', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDatePicker(String label, DateTime date, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppTheme.lightSurface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.lightBorder),
-        ),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted)),
-            const SizedBox(height: 4),
+            Text('NEW ADVENTURE', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
+            const SizedBox(height: 8),
+            Text('Plan a New Journey', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+            const SizedBox(height: 16),
+            Text(
+              'Define your next destination and let our engine craft an editorial itinerary just for you.',
+              style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF475569), height: 1.5),
+            ),
+            
+            const SizedBox(height: 48),
+            
+            _buildFieldLabel('DESTINATION'),
+            _buildTextField(_destinationController, 'Search cities, regions or country', prefix: const Icon(Icons.search, size: 20)),
+            
+            const SizedBox(height: 32),
+            
             Row(
               children: [
-                const Icon(Icons.calendar_today, size: 16, color: AppTheme.primaryColor),
-                const SizedBox(width: 8),
-                Text(DateFormat('MMM dd, yyyy').format(date),
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildFieldLabel('DEPARTURE'),
+                      _buildTextField(_departureController, 'mm/dd/yyyy', prefix: const Icon(Icons.calendar_today, size: 20), suffix: const Icon(Icons.calendar_month, size: 20)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildFieldLabel('RETURN'),
+                      _buildTextField(_returnController, 'mm/dd/yyyy', prefix: const Icon(Icons.calendar_today, size: 20), suffix: const Icon(Icons.calendar_month, size: 20)),
+                    ],
+                  ),
+                ),
               ],
             ),
+            
+            const SizedBox(height: 32),
+            _buildFieldLabel('TRAVELERS'),
+            _buildCounterField('Adults', '18+ years', _adults, (val) => setState(() => _adults = val)),
+            const SizedBox(height: 12),
+            _buildCounterField('Children', '0-17 years', _children, (val) => setState(() => _children = val)),
+            
+            const SizedBox(height: 32),
+            _buildFieldLabel('TRIP TYPE'),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 2.8,
+              children: [
+                _buildTripTypeButton('SOLO'),
+                _buildTripTypeButton('COUPLE'),
+                _buildTripTypeButton('FAMILY'),
+                _buildTripTypeButton('GROUP'),
+              ],
+            ),
+            
+            const SizedBox(height: 32),
+            _buildFieldLabel('QUICK CHECKLIST ITEMS'),
+            ..._checklistItems.map((item) => _buildChecklistItem(item)),
+            
+            const SizedBox(height: 48),
+            
+            SizedBox(
+              width: double.infinity,
+              height: 60,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF475569),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('INITIALIZE TRIP', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.arrow_forward, color: Colors.white, size: 18),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            Center(
+              child: Text('SECURE AI PROCESSING', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF94A3B8), letterSpacing: 1.5)),
+            ),
+            const SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCounterButton(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: AppTheme.lightCard,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.lightBorder),
+  Widget _buildFieldLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.0)),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String hint, {Widget? prefix, Widget? suffix}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: TextField(
+        controller: controller,
+        style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textPrimary),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: GoogleFonts.inter(color: Colors.grey.shade400),
+          prefixIcon: prefix,
+          suffixIcon: suffix,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.all(16),
         ),
-        child: Icon(icon, size: 18, color: AppTheme.primaryColor),
+      ),
+    );
+  }
+
+  Widget _buildCounterField(String title, String subtitle, int value, Function(int) onChanged) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+              Text(subtitle, style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF64748B))),
+            ],
+          ),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => value > 0 ? onChanged(value - 1) : null,
+                icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF64748B), size: 24),
+              ),
+              const SizedBox(width: 8),
+              Text('$value', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => onChanged(value + 1),
+                icon: const Icon(Icons.add_circle, color: Color(0xFF475569), size: 24),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTripTypeButton(String type) {
+    final isSelected = _selectedTripType == type;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTripType = type),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        alignment: Alignment.center,
+        child: Text(type, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B))),
+      ),
+    );
+  }
+
+  Widget _buildChecklistItem(String item) {
+    final isSelected = _selectedChecklist.contains(item);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: isSelected,
+            onChanged: (val) {
+              setState(() {
+                if (val == true) _selectedChecklist.add(item);
+                else _selectedChecklist.remove(item);
+              });
+            },
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            activeColor: const Color(0xFF475569),
+          ),
+          const SizedBox(width: 12),
+          Text(item, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF475569))),
+        ],
       ),
     );
   }

@@ -288,6 +288,13 @@ class ApiService {
     });
   }
 
+  Future<Response> translateText(String text, String from, String to) async {
+    return _dio.get('https://api.mymemory.translated.net/get', queryParameters: {
+      'q': text,
+      'langpair': '$from|$to',
+    });
+  }
+
   // Accommodation
   Future<Response> searchAccommodation(double lat, double lng, {String? type, int? radius}) async {
     final params = <String, dynamic>{'lat': lat, 'lng': lng};

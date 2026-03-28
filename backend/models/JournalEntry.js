@@ -36,7 +36,7 @@ const journalEntrySchema = new mongoose.Schema({
   }],
   mood: {
     type: String,
-    enum: ['amazing', 'happy', 'neutral', 'tired', 'sad', ''],
+    enum: ['Adventurous', 'Happy', 'Peaceful', 'Tired', 'Amazing', 'Sad', 'Neutral', 'amazing', 'happy', 'tired', 'sad', ''],
     default: '',
   },
   distanceTraveled: {

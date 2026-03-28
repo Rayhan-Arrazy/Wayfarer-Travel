@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
-import '../../config/routes.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../services/api_service.dart';
@@ -208,17 +207,14 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                     Text('Wayfarer', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
                   ],
                 ),
-                GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-                  child: Container(
-                    width: 34, height: 34,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white54, width: 2),
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                    child: const Icon(Icons.person, color: Colors.white, size: 18),
+                Container(
+                  width: 34, height: 34,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white54, width: 2),
+                    color: Colors.white.withValues(alpha: 0.2),
                   ),
+                  child: const Icon(Icons.person, color: Colors.white, size: 18),
                 ),
               ],
             ),

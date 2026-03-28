@@ -9,9 +9,11 @@ class TripModel {
   final int partySize;
   final String coverImage;
   final List<ChecklistItem> checklist;
+  final List<ItineraryActivity> itinerary;
   final String notes;
   final String status;
   final TripBudget budget;
+  final List<TripExpense> expenses;
   final DestinationInfo? destinationInfo;
   final DateTime createdAt;
 
@@ -26,9 +28,11 @@ class TripModel {
     this.partySize = 1,
     this.coverImage = '',
     this.checklist = const [],
+    this.itinerary = const [],
     this.notes = '',
     this.status = 'planning',
     TripBudget? budget,
+    this.expenses = const [],
     this.destinationInfo,
     DateTime? createdAt,
   }) : budget = budget ?? TripBudget(),
@@ -58,9 +62,15 @@ class TripModel {
       checklist: (json['checklist'] as List<dynamic>?)
           ?.map((e) => ChecklistItem.fromJson(e))
           .toList() ?? [],
+      itinerary: (json['itinerary'] as List<dynamic>?)
+          ?.map((e) => ItineraryActivity.fromJson(e))
+          .toList() ?? [],
       notes: json['notes'] ?? '',
       status: json['status'] ?? 'planning',
       budget: json['budget'] != null ? TripBudget.fromJson(json['budget']) : TripBudget(),
+      expenses: (json['expenses'] as List<dynamic>?)
+          ?.map((e) => TripExpense.fromJson(e))
+          .toList() ?? [],
       destinationInfo: json['destinationInfo'] != null
           ? DestinationInfo.fromJson(json['destinationInfo'])
           : null,
@@ -76,6 +86,42 @@ class TripModel {
     'partySize': partySize,
     'notes': notes,
     'budget': budget.toJson(),
+    'expenses': expenses.map((e) => e.toJson()).toList(),
+    'itinerary': itinerary.map((e) => e.toJson()).toList(),
+  };
+}
+
+class ItineraryActivity {
+  final String title;
+  final String time;
+  final DateTime? date;
+  final String location;
+  final bool checked;
+
+  ItineraryActivity({
+    required this.title,
+    this.time = '',
+    this.date,
+    this.location = '',
+    this.checked = false,
+  });
+
+  factory ItineraryActivity.fromJson(Map<String, dynamic> json) {
+    return ItineraryActivity(
+      title: json['title'] ?? '',
+      time: json['time'] ?? '',
+      date: json['date'] != null ? DateTime.parse(json['date']) : null,
+      location: json['location'] ?? '',
+      checked: json['checked'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'title': title,
+    'time': time,
+    'date': date?.toIso8601String(),
+    'location': location,
+    'checked': checked,
   };
 }
 
@@ -145,4 +191,38 @@ class DestinationInfo {
       flagUrl: json['flagUrl'] ?? '',
     );
   }
+}
+
+class TripExpense {
+  final String id;
+  final String title;
+  final double amount;
+  final DateTime date;
+  final String category;
+
+  TripExpense({
+    this.id = '',
+    required this.title,
+    required this.amount,
+    required this.date,
+    this.category = 'General',
+  });
+
+  factory TripExpense.fromJson(Map<String, dynamic> json) {
+    return TripExpense(
+      id: json['_id'] ?? '',
+      title: json['title'] ?? '',
+      amount: (json['amount'] ?? 0).toDouble(),
+      date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
+      category: json['category'] ?? 'General',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    '_id': id,
+    'title': title,
+    'amount': amount,
+    'date': date.toIso8601String(),
+    'category': category,
+  };
 }

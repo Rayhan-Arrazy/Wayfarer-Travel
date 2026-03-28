@@ -56,9 +56,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppTheme.primaryColor),
-        actions: [
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
-        ],
+        actions: const [],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},

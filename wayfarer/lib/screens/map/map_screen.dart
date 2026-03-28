@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import '../../config/theme.dart';
-import '../../services/api_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -16,240 +14,109 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   final _searchController = TextEditingController();
-  final ApiService _api = ApiService();
 
-  LatLng _center = const LatLng(35.6895, 139.6917); // Tokyo
+  LatLng _currentLocation = const LatLng(-6.2000, 106.8166); // Default: Jakarta
   double _zoom = 15.0;
   List<Marker> _markers = [];
-  String _selectedCategory = 'Restaurants';
-  bool _isSearching = false;
-
-  // Currently selected place for bottom sheet
+  String _selectedCategory = 'All';
+  bool _isLoading = false;
   Map<String, dynamic>? _selectedPlace;
-  bool _showBottomSheet = true;
 
   final List<Map<String, dynamic>> _categories = [
-    {'icon': Icons.restaurant, 'label': 'Restaurants', 'osm': 'restaurant'},
-    {'icon': Icons.hotel, 'label': 'Stays', 'osm': 'hotel'},
-    {'icon': Icons.camera_alt, 'label': 'Sights', 'osm': 'tourism'},
+    {'icon': Icons.stars, 'label': 'All', 'type': 'all'},
+    {'icon': Icons.restaurant, 'label': 'Dining', 'type': 'restaurant'},
+    {'icon': Icons.train, 'label': 'Transport', 'type': 'station'},
+    {'icon': Icons.atm, 'label': 'ATM', 'type': 'atm'},
+    {'icon': Icons.hotel, 'label': 'Hotels', 'type': 'hotel'},
+    {'icon': Icons.camera_alt, 'label': 'Attractions', 'type': 'tourism'},
   ];
-
-  // Default featured place
-  final Map<String, dynamic> _defaultPlace = {
-    'name': 'Tonkotsu Ramen Shinjuku',
-    'address': '2 Chome-1-1 Shinjuku, Tokyo 160-0022, Japan',
-    'category': 'TOP RATED DINING',
-    'rating': 5,
-    'image': 'https://images.unsplash.com/photo-1557872943-16a5ac26437e?w=800&q=80',
-    'hours': 'OPEN UNTIL\n11:45 PM',
-    'price': 'MODERATE',
-    'lat': 35.6938,
-    'lng': 139.7034,
-  };
 
   @override
   void initState() {
     super.initState();
-    _selectedPlace = _defaultPlace;
-    _addMarker(_center, _defaultPlace['name']);
+    _initLocation();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  Future<void> _initLocation() async {
+    setState(() => _isLoading = true);
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _currentLocation = LatLng(position.latitude, position.longitude);
+        _isLoading = false;
+      });
+      _mapController.move(_currentLocation, _zoom);
+      _fetchNearbyPlaces();
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _fetchNearbyPlaces(); // Fetch anyway with default location
+    }
   }
 
-  void _addMarker(LatLng pos, String label) {
+  Future<void> _fetchNearbyPlaces() async {
+    // In a real app, this would call the API. For now, we'll mock some places nearby.
+    // Based on Image 2: ATM, Dining, Station
     setState(() {
       _markers = [
-        Marker(
-          point: pos,
-          width: 40,
-          height: 40,
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF97316),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [BoxShadow(color: const Color(0xFFF97316).withValues(alpha: 0.4), blurRadius: 8)],
-            ),
-            child: const Icon(Icons.location_on, color: Colors.white, size: 20),
-          ),
-        ),
+        _buildCustomMarker(_currentLocation.latitude + 0.002, _currentLocation.longitude - 0.003, 'ATM', Icons.atm, 'Global Bank ATM'),
+        _buildCustomMarker(_currentLocation.latitude + 0.001, _currentLocation.longitude + 0.002, 'DINING', Icons.restaurant, 'L\'As du Fallafel'),
+        _buildCustomMarker(_currentLocation.latitude - 0.001, _currentLocation.longitude + 0.001, 'STATION', Icons.train, 'Châtelet – Les Halles'),
       ];
     });
   }
 
-  Future<void> _searchPlace(String query) async {
-    if (query.isEmpty) return;
-    setState(() => _isSearching = true);
-    try {
-      final response = await _api.searchPlaces(query);
-      final results = response.data;
-      if (results is List && results.isNotEmpty) {
-        final first = results[0];
-        final lat = (first['lat'] as num?)?.toDouble() ?? _center.latitude;
-        final lng = (first['lng'] as num?)?.toDouble() ?? (first['lon'] as num?)?.toDouble() ?? _center.longitude;
-        final newCenter = LatLng(lat, lng);
-
-        setState(() {
-          _center = newCenter;
-          _selectedPlace = {
-            'name': first['name'] ?? query,
-            'address': first['display_name'] ?? first['address'] ?? '',
-            'category': _selectedCategory.toUpperCase(),
-            'rating': 4,
-            'image': '',
-            'hours': '',
-            'price': '',
-            'lat': lat,
-            'lng': lng,
-          };
-          _showBottomSheet = true;
-        });
-
-        _addMarker(newCenter, first['name'] ?? query);
-        _mapController.move(newCenter, 16);
-      }
-    } catch (e) {
-      // Silently fail
-    }
-    setState(() => _isSearching = false);
-  }
-
-  Future<void> _searchNearby(String type) async {
-    try {
-      final response = await _api.getNearbyPlaces(_center.latitude, _center.longitude, type, radius: 2000);
-      final dynamic data = response.data;
-      List<dynamic> resultsList = [];
-      
-      if (data is List) {
-        resultsList = data;
-      } else if (data is Map) {
-        // Handle Overpass elements OR our custom wrapper like { restaurants: [...] }
-        resultsList = data['elements'] ?? data['restaurants'] ?? data['stops'] ?? data['accommodations'] ?? [];
-      }
-
-      if (resultsList.isNotEmpty) {
-        List<Marker> newMarkers = [];
-        for (var place in resultsList.take(15)) {
-          final lat = (place['lat'] as num?)?.toDouble() ?? (place['center'] != null ? (place['center']['lat'] as num?)?.toDouble() : null);
-          final lng = (place['lng'] as num?)?.toDouble() ?? (place['lon'] as num?)?.toDouble() ?? (place['center'] != null ? (place['center']['lon'] as num?)?.toDouble() : null);
-          
-          if (lat != null && lng != null) {
-            final name = place['name'] ?? (place['tags'] != null ? place['tags']['name'] : null) ?? 'Nearby Spot';
-            final address = place['address'] ?? (place['tags'] != null ? [place['tags']['addr:street'], place['tags']['addr:housenumber']].where((e) => e != null).join(' ') : null) ?? '';
-            final category = type.toUpperCase();
-            final image = place['imageUrl'] ?? '';
-
-            newMarkers.add(
-              Marker(
-                point: LatLng(lat, lng),
-                width: 40, height: 40,
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedPlace = {
-                        'name': name,
-                        'address': address.isEmpty ? 'Tap for more info' : address,
-                        'category': category,
-                        'rating': 4,
-                        'image': image,
-                        'hours': 'OPEN',
-                        'price': 'MODERATE',
-                        'lat': lat,
-                        'lng': lng,
-                      };
-                      _showBottomSheet = true;
-                    });
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                    ),
-                    child: Icon(_getIconForType(type), color: Colors.white, size: 20),
-                  ),
-                ),
+  Marker _buildCustomMarker(double lat, double lng, String label, IconData icon, String name) {
+    return Marker(
+      point: LatLng(lat, lng),
+      width: 100,
+      height: 80,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedPlace = {
+              'name': name,
+              'type': label,
+              'distance': '200m away',
+              'hours': 'Open 24h',
+              'icon': icon,
+            };
+          });
+        },
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E2E46).withOpacity(0.8),
+                borderRadius: BorderRadius.circular(8),
               ),
-            );
-          }
-        }
-        if (newMarkers.isNotEmpty) setState(() => _markers = newMarkers);
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _handleMapTap(TapPosition tapPosition, LatLng point) async {
-    setState(() {
-      _isSearching = true;
-      _showBottomSheet = false;
-    });
-    try {
-      // Revert to backend proxy or direct to nominatim if proxy fails
-      // We will just try using _api.reverseGeocode if exists, else direct parsing
-      // For simplicity let's use the node backend proxy.
-      final res = await _api.reverseGeocode(point.latitude, point.longitude);
-      final data = res.data;
-      String name = 'Marked Location';
-      String address = '${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)}';
-      
-      if (data is Map) {
-         name = data['name'] ?? data['address']?['suburb'] ?? data['address']?['city'] ?? data['display_name']?.toString().split(',')[0] ?? name;
-         address = data['display_name'] ?? address;
-      }
-      
-      setState(() {
-          _selectedPlace = {
-            'name': name,
-            'address': address,
-            'category': 'MARKED POINT',
-            'rating': 4,
-            'image': '',
-            'hours': '',
-            'price': '',
-            'lat': point.latitude,
-            'lng': point.longitude,
-          };
-          _showBottomSheet = true;
-      });
-      _addMarker(point, name);
-    } catch (_) {
-      setState(() {
-          _selectedPlace = {
-            'name': 'Marked Location',
-            'address': '${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)}',
-            'category': 'MARKED POINT',
-            'rating': 4,
-            'image': '',
-            'hours': '',
-            'price': '',
-            'lat': point.latitude,
-            'lng': point.longitude,
-          };
-          _showBottomSheet = true;
-      });
-      _addMarker(point, 'Marked Location');
-    }
-    setState(() => _isSearching = false);
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: Colors.white, size: 14),
+                  const SizedBox(width: 4),
+                  Text(label, style: GoogleFonts.inter(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            const Icon(Icons.location_on, color: Color(0xFF1E2E46), size: 30),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.lightBg,
       body: Stack(
         children: [
-          // Full-screen map — using Google Maps tiles
+          // Map
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: _center,
+              initialCenter: _currentLocation,
               initialZoom: _zoom,
-              onTap: _handleMapTap,
             ),
             children: [
               TileLayer(
@@ -258,274 +125,223 @@ class _MapScreenState extends State<MapScreen> {
                 userAgentPackageName: 'com.wayfarer.app',
               ),
               MarkerLayer(markers: _markers),
+              MarkerLayer(markers: [
+                // Current location marker
+                Marker(
+                  point: _currentLocation,
+                  width: 20,
+                  height: 20,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 10, spreadRadius: 5)],
+                    ),
+                  ),
+                ),
+              ]),
             ],
           ),
 
-          // Top UI Layer — Search + Chips
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator()),
+
+          // Search Bar
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                children: [
-                  // Search Bar — matches prototype
-                  Container(
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
-                    ),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 16),
-                        const Icon(Icons.search, color: AppTheme.textSecondary),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 16),
-                            decoration: InputDecoration(
-                              hintText: 'Search places...',
-                              hintStyle: GoogleFonts.inter(color: AppTheme.textMuted),
-                              border: InputBorder.none,
-                              fillColor: Colors.transparent,
-                              filled: true,
-                            ),
-                            onSubmitted: _searchPlace,
-                          ),
-                        ),
-                        if (_isSearching)
-                          const Padding(padding: EdgeInsets.all(16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
-                        else
-                          GestureDetector(
-                            onTap: () => _searchPlace(_searchController.text),
-                            child: Container(padding: const EdgeInsets.all(16), child: const Icon(Icons.tune, color: AppTheme.textSecondary)),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Category chips — matches prototype
-                  SizedBox(
-                    height: 40,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _categories.length,
-                      itemBuilder: (ctx, i) {
-                        final cat = _categories[i];
-                        final isActive = _selectedCategory == cat['label'];
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() => _selectedCategory = cat['label']);
-                            _searchNearby(cat['osm']);
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 12),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: isActive ? AppTheme.primaryColor : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2))],
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(cat['icon'], size: 16, color: isActive ? Colors.white : AppTheme.textPrimary),
-                                const SizedBox(width: 8),
-                                Text(cat['label'], style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14, color: isActive ? Colors.white : AppTheme.textPrimary)),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Bottom Sheet — Place detail card like prototype
-          if (_showBottomSheet && _selectedPlace != null)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
+              padding: const EdgeInsets.all(20),
               child: Container(
-                decoration: const BoxDecoration(
+                height: 56,
+                decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -5))],
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                child: Row(
                   children: [
-                    const SizedBox(height: 12),
-                    Container(width: 48, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Category + rating + favorite
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(_selectedPlace!['category'] ?? 'PLACE', style: GoogleFonts.inter(color: const Color(0xFFF97316), fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1)),
-                                  const SizedBox(width: 8),
-                                  Row(children: List.generate((_selectedPlace!['rating'] ?? 4) as int, (_) => const Icon(Icons.star, size: 12, color: Color(0xFFF97316)))),
-                                ],
-                              ),
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
-                                child: const Icon(Icons.favorite, color: Color(0xFFF97316), size: 20),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          // Name
-                          Text(_selectedPlace!['name'] ?? '', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
-                          const SizedBox(height: 4),
-                          // Address
-                          Row(
-                            children: [
-                              const Icon(Icons.location_on, color: AppTheme.textSecondary, size: 16),
-                              const SizedBox(width: 4),
-                              Expanded(child: Text(_selectedPlace!['address'] ?? '', style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Image + info cards row
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: 5,
-                                child: Stack(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Container(
-                                        height: 140, width: double.infinity,
-                                        color: Colors.grey.shade200,
-                                        child: _selectedPlace!['image'] != null && (_selectedPlace!['image'] as String).isNotEmpty
-                                            ? CachedNetworkImage(imageUrl: _selectedPlace!['image'], fit: BoxFit.cover, errorWidget: (_, __, ___) => const Icon(Icons.restaurant, size: 40, color: AppTheme.textMuted))
-                                            : const Icon(Icons.restaurant, size: 40, color: AppTheme.textMuted),
-                                      ),
-                                    ),
-                                     if (_selectedPlace!['rating'] != null && (_selectedPlace!['rating'] as num) >= 4)
-                                      Positioned(
-                                        bottom: 8, left: 8,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(color: const Color(0xFFF97316), borderRadius: BorderRadius.circular(4)),
-                                          child: Text("TOP RATED", style: GoogleFonts.inter(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                flex: 4,
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      height: 66, width: double.infinity,
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(color: const Color(0xFFE0E7FF), borderRadius: BorderRadius.circular(16)),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          const Icon(Icons.phone, size: 16, color: AppTheme.primaryColor),
-                                          const SizedBox(height: 4),
-                                          Text("OPENS UNTIL\n11:00 PM", textAlign: TextAlign.center, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 10, color: AppTheme.primaryColor, height: 1.2)),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      height: 66, width: double.infinity,
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(16)),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text("¥", style: GoogleFonts.inter(fontSize: 18, color: AppTheme.textSecondary)),
-                                          const Spacer(),
-                                          Text("MODERATE", style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 10, color: AppTheme.textSecondary)),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Action buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 6,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.directions, color: Colors.white, size: 18),
-                                  label: const Text("Get Directions"),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryColor,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: 4,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.menu_book, color: AppTheme.primaryColor, size: 18),
-                                  label: const Text("Menu"),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFF1F5F9),
-                                    foregroundColor: AppTheme.primaryColor,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 30),
-                        ],
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Icon(Icons.search, color: Color(0xFF64748B)),
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Explore destinations, essentials...',
+                          hintStyle: GoogleFonts.inter(color: const Color(0xFF94A3B8)),
+                          border: InputBorder.none,
+                          fillColor: Colors.transparent,
+                        ),
                       ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.tune, color: Color(0xFF64748B)),
+                      onPressed: _showFilters,
                     ),
                   ],
                 ),
               ),
             ),
+          ),
+
+          // Bottom Controls
+          Positioned(
+            bottom: 24,
+            left: 20,
+            right: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Current Location Button
+                FloatingActionButton(
+                  mini: true,
+                  backgroundColor: Colors.white,
+                  onPressed: _initLocation,
+                  child: const Icon(Icons.my_location, color: Color(0xFF1E2E46)),
+                ),
+                const SizedBox(height: 16),
+                
+                // Details Card (like Image 2)
+                if (_selectedPlace != null)
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0E7FF),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(_selectedPlace!['icon'], color: const Color(0xFF1E2E46)),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('NEAREST ESSENTIAL', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1)),
+                              const SizedBox(height: 4),
+                              Text(_selectedPlace!['name'], style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+                              const SizedBox(height: 2),
+                              Text('${_selectedPlace!['distance']} • ${_selectedPlace!['hours']}', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B))),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {},
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF475569),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Navigate'),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  IconData _getIconForType(String type) {
-    if (type.contains('restaurant')) return Icons.restaurant;
-    if (type.contains('hotel')) return Icons.hotel;
-    if (type.contains('tourism')) return Icons.camera_alt;
-    return Icons.location_on;
+  void _showFilters() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Filters', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+                TextButton(onPressed: () {}, child: Text('Reset', style: GoogleFonts.inter(color: const Color(0xFF475569), fontWeight: FontWeight.w600))),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Text('CATEGORY', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF94A3B8), letterSpacing: 1)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _categories.map((cat) {
+                bool isSelected = _selectedCategory == cat['label'];
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedCategory = cat['label']),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF475569) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(cat['icon'], size: 16, color: isSelected ? Colors.white : const Color(0xFF475569)),
+                        const SizedBox(width: 8),
+                        Text(cat['label'], style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : const Color(0xFF475569))),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 32),
+            Text('DISTANCE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF94A3B8), letterSpacing: 1)),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Text('500m', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+                Expanded(
+                  child: Slider(
+                    value: 2000,
+                    min: 500,
+                    max: 5000,
+                    activeColor: const Color(0xFF475569),
+                    inactiveColor: const Color(0xFFE2E8F0),
+                    onChanged: (v) {},
+                  ),
+                ),
+                Text('5km', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
+              ],
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF475569),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Text('Show Results', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
   }
 }
