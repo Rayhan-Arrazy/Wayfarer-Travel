@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
-import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 // Admin Panel maintains its own screens within main.dart or via package imports.
 // Removed incorrect relative imports to mobile app directories.
@@ -181,6 +179,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   List<dynamic> _trips = [];
   List<dynamic> _users = [];
   List<dynamic> _journals = [];
+  List<dynamic> _guides = [];
   
   late Dio _dio;
 
@@ -211,10 +210,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
         
         // Fetch remaining data in background
         _fetchExtraData();
+        _fetchGuides();
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _fetchGuides() async {
+    try {
+      final res = await _dio.get('/admin/guides');
+      if (mounted) {
+        setState(() {
+          _guides = res.data['guides'] ?? [];
+        });
+      }
+    } catch (e) {}
   }
 
   Future<void> _fetchExtraData() async {
@@ -333,7 +344,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         if (_selectedIndex == 4) ...[
                           Text('Country Guides Repository', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
                           const SizedBox(height: 24),
-                          _buildContentTable(),
+                          _buildGuidesTable(),
                           const SizedBox(height: 100),
                         ],
 
@@ -394,9 +405,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _buildNavItem(1, Icons.business_center_outlined, 'Trips'),
           _buildNavItem(3, Icons.people_outline, 'Users'),
           _buildNavItem(4, Icons.map_outlined, 'Guides'),
-          _buildNavItem(5, Icons.notifications_none_outlined, 'Alerts'),
           _buildNavItem(6, Icons.book_outlined, 'Journals'),
-          _buildNavItem(7, Icons.favorite_border, 'Followers'),
           
           const Spacer(),
           Padding(
@@ -633,6 +642,99 @@ class _AdminDashboardState extends State<AdminDashboard> {
             if (_selectedIndex == 6) return _buildJournalTableRow(item, () => _deleteJournal(item['_id']));
             return _buildTripTableRow(item, () => _deleteTrip(item['_id']));
           }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuidesTable() {
+    return Container(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFE2E8F0))),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: Row(
+              children: [
+                Expanded(flex: 3, child: Text('COUNTRY & CODE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)))),
+                Expanded(flex: 2, child: Text('LANGUAGE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)))),
+                Expanded(flex: 2, child: Text('CURRENCY', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)))),
+                SizedBox(width: 80, child: Text('ACTIONS', textAlign: TextAlign.right, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)))),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+          ..._guides.map((guide) {
+            return Column(
+              children: [
+                _buildGuideTableRow(guide, () => _deleteGuide(guide['_id'])),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+              ]
+            );
+          }).toList(),
+          if (_guides.isEmpty) Padding(
+            padding: const EdgeInsets.all(48.0),
+            child: Center(child: Text('No guides found in repository.', style: GoogleFonts.inter(color: Colors.blueGrey))),
+          )
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteGuide(String id) async {
+    try {
+      await _dio.delete('/admin/guides/$id');
+      _fetchGuides();
+    } catch (e) {}
+  }
+
+  Widget _buildGuideTableRow(dynamic guide, VoidCallback onDelete) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(guide['flagUrl'] ?? '', width: 40, height: 28, fit: BoxFit.cover, errorBuilder: (c,e,s) => Container(width: 40, height: 28, color: Colors.grey))),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(guide['name'] ?? 'Unknown', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46)), maxLines: 1),
+                      Text(guide['countryCode'] ?? '??', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF475569))),
+                    ],
+                  ),
+                )
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(guide['language'] ?? 'N/A', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF475569))),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(guide['currency'] ?? 'N/A', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF475569))),
+          ),
+          SizedBox(
+            width: 80,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                InkWell(
+                  onTap: onDelete,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(border: Border.all(color: const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.delete, size: 16, color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          )
         ],
       ),
     );

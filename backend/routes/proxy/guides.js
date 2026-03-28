@@ -35,10 +35,6 @@ router.get('/search', async (req, res) => {
     }
 
     // 2. Try External API (REST Countries)
-    const cacheKey = `country_search_${q.toLowerCase()}`;
-    let externalData = getCached(cacheKey);
-
-    if (!externalData) {
       try {
         const results = await axiosGet(`https://restcountries.com/v3.1/name/${encodeURIComponent(q)}`);
         
@@ -47,8 +43,7 @@ router.get('/search', async (req, res) => {
           const name = c.name.common;
           const imageUrl = await getUnsplashImage(`${name} travel landscape`);
           
-          return {
-            _id: `dynamic_${c.cca2}`,
+          const newGuide = {
             name: name,
             countryCode: c.cca2,
             flagUrl: c.flags.png,
@@ -56,22 +51,31 @@ router.get('/search', async (req, res) => {
             description: `${name} is a beautiful destination in ${c.region}. Known for its rich history and vibrant culture.`,
             language: Object.values(c.languages || {})[0] || 'English',
             currency: Object.keys(c.currencies || {})[0] || 'USD',
-            capital: c.capital?.[0] || 'Unknown',
-            region: c.region,
-            population: c.population,
-            latlng: c.latlng,
-            isDynamic: true
+            bestTimeToVisit: 'Spring or Autumn',
+            featured: false,
+            tips: ['Explore local cafes', 'Check visa requirements']
           };
+
+          // AUTO-SAVE to our project's MongoDB to satisfy "Our Own API" requirement
+          try {
+            await CountryGuide.findOneAndUpdate(
+              { countryCode: c.cca2 },
+              newGuide,
+              { upsert: true, new: true }
+            );
+          } catch (e) {
+            console.error('Auto-save guide failed:', e);
+          }
+          
+          return newGuide;
         }));
         
-        externalData = dynamicGuides;
-        setCache(cacheKey, externalData, 60 * 60 * 1000); // Cache for 1 hour
+        return res.json(dynamicGuides);
       } catch (err) {
         return res.json([]); // No results found anywhere
       }
-    }
+    res.json([]);
 
-    res.json(externalData);
   } catch (err) {
     console.error('Search error:', err);
     res.status(500).json({ message: 'Server Error' });
