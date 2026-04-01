@@ -64,14 +64,61 @@ router.get('/reverse', async (req, res) => {
 router.get('/nearby', async (req, res) => {
   try {
     const { lat, lng, type, radius } = req.query;
-    const rad = radius || 1000;
+    const rad = radius || 2000;
+    const amenityType = type || 'all';
     
-    let amenityType = type || 'restaurant';
+    let overpassFilter = '';
+    if (amenityType === 'all') {
+      overpassFilter = `
+        node["amenity"~"restaurant|cafe|fast_food|bar|atm|bank|pharmacy|hospital"](around:${rad},${lat},${lng});
+        way["amenity"~"restaurant|cafe|fast_food|bar|atm|bank|pharmacy|hospital"](around:${rad},${lat},${lng});
+        node["tourism"](around:${rad},${lat},${lng});
+        way["tourism"](around:${rad},${lat},${lng});
+        node["railway"="station"](around:${rad},${lat},${lng});
+        way["railway"="station"](around:${rad},${lat},${lng});
+      `;
+    } else if (amenityType === 'restaurant') {
+      overpassFilter = `
+        node["amenity"~"restaurant|cafe|fast_food|bar"](around:${rad},${lat},${lng});
+        way["amenity"~"restaurant|cafe|fast_food|bar"](around:${rad},${lat},${lng});
+      `;
+    } else if (amenityType === 'station') {
+      overpassFilter = `
+        node["railway"="station"](around:${rad},${lat},${lng});
+        way["railway"="station"](around:${rad},${lat},${lng});
+        node["amenity"="bus_station"](around:${rad},${lat},${lng});
+      `;
+    } else if (amenityType === 'tourism') {
+      overpassFilter = `
+        node["tourism"](around:${rad},${lat},${lng});
+        way["tourism"](around:${rad},${lat},${lng});
+      `;
+    } else if (amenityType === 'hotel') {
+      overpassFilter = `
+        node["tourism"~"hotel|hostel|guest_house"](around:${rad},${lat},${lng});
+        way["tourism"~"hotel|hostel|guest_house"](around:${rad},${lat},${lng});
+      `;
+    } else if (amenityType === 'emergency') {
+      overpassFilter = `
+        node["amenity"~"hospital|pharmacy|clinic|doctors"](around:${rad},${lat},${lng});
+        way["amenity"~"hospital|pharmacy|clinic|doctors"](around:${rad},${lat},${lng});
+      `;
+    } else if (amenityType === 'financial') {
+      overpassFilter = `
+        node["amenity"~"atm|bank|bureau_de_change"](around:${rad},${lat},${lng});
+        way["amenity"~"atm|bank|bureau_de_change"](around:${rad},${lat},${lng});
+      `;
+    } else {
+      overpassFilter = `
+        node["amenity"="${amenityType}"](around:${rad},${lat},${lng});
+        way["amenity"="${amenityType}"](around:${rad},${lat},${lng});
+      `;
+    }
+
     const overpassQuery = `
       [out:json][timeout:25];
       (
-        node["amenity"="${amenityType}"](around:${rad},${lat},${lng});
-        way["amenity"="${amenityType}"](around:${rad},${lat},${lng});
+        ${overpassFilter}
       );
       out center body;
     `;
