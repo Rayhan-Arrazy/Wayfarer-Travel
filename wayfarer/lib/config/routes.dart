@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
@@ -17,11 +18,15 @@ import '../screens/trip_planner/activity_form_screen.dart';
 import '../screens/trip_planner/edit_trip_screen.dart';
 import '../screens/tools/budgeter_screen.dart';
 import '../screens/tools/expense_form_screen.dart';
+import '../screens/tools/tools_tab_screen.dart';
 import '../screens/guide/continent_detail_screen.dart';
-import '../../models/trip_model.dart';
-import '../../models/journal_model.dart';
+import '../providers/auth_provider.dart';
+import '../widgets/loading_widget.dart';
+import '../models/trip_model.dart';
+import '../models/journal_model.dart';
 
 class AppRoutes {
+  static const String root = '/';
   static const String login = '/login';
   static const String register = '/register';
   static const String home = '/home';
@@ -40,9 +45,11 @@ class AppRoutes {
   static const String activityForm = '/activity-form';
   static const String budgeter = '/budgeter';
   static const String expenseForm = '/expense-form';
+  static const String tools = '/tools';
   static const String editTrip = '/trips/edit';
 
   static Map<String, WidgetBuilder> get routes => {
+    root: (_) => const LoadingRedirect(),
     login: (_) => const LoginScreen(),
     register: (_) => const RegisterScreen(),
     home: (_) => const HomeScreen(),
@@ -55,12 +62,10 @@ class AppRoutes {
     journal: (_) => const JournalScreen(),
     journalAdd: (_) => const AddJournalScreen(),
     itinerary: (_) => const ItineraryScreen(),
-    activityForm: (_) => const ActivityFormScreen(),
     budgeter: (_) => const BudgeterScreen(),
-    expenseForm: (_) => const ExpenseFormScreen(),
+    tools: (_) => const ToolsTabScreen(),
   };
 
-  /// Use onGenerateRoute for screens that need arguments
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case tripDetail:
@@ -72,6 +77,11 @@ class AppRoutes {
         final data = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
           builder: (_) => ExpenseFormScreen(initialData: data),
+        );
+      case activityForm:
+        final data = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => ActivityFormScreen(initialData: data),
         );
       case editTrip:
         final trip = settings.arguments as TripModel;
@@ -91,5 +101,24 @@ class AppRoutes {
       default:
         return null;
     }
+  }
+}
+
+class LoadingRedirect extends StatelessWidget {
+  const LoadingRedirect({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    
+    if (auth.isLoading) {
+      return const LoadingWidget();
+    }
+
+    if (auth.isAuthenticated) {
+      return const HomeScreen();
+    }
+
+    return const LoginScreen();
   }
 }

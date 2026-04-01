@@ -80,7 +80,6 @@ router.post('/', auth, async (req, res) => {
       endDate,
       partySize: partySize || 1,
       notes: notes || '',
-      budget: budget || { amount: 0, currency: req.user.homeCurrency },
       destinationInfo,
       checklist,
     });

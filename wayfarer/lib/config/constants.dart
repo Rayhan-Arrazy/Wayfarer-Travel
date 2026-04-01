@@ -1,6 +1,6 @@
 class AppConstants {
   // API Base URL - change this to your server IP/domain
-  static const String baseUrl = 'http://localhost:5000/api';
+  static const String baseUrl = 'http://localhost:5000/api/';
   static const String adminUrl = 'http://localhost:3001';
   
   // App Info

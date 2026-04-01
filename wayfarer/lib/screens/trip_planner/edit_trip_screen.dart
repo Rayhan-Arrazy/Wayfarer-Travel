@@ -19,6 +19,10 @@ class _EditTripScreenState extends State<EditTripScreen> {
   late int _travelers;
   bool _isLoading = false;
 
+  late List<ItineraryActivity> _itinerary;
+  final _activityTitleController = TextEditingController();
+  final _activityTimeController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -26,6 +30,7 @@ class _EditTripScreenState extends State<EditTripScreen> {
     _departureController = TextEditingController(text: _formatDate(widget.trip.startDate));
     _returnController = TextEditingController(text: _formatDate(widget.trip.endDate));
     _travelers = widget.trip.partySize;
+    _itinerary = List.from(widget.trip.itinerary);
   }
 
   String _formatDate(DateTime date) {
@@ -38,28 +43,18 @@ class _EditTripScreenState extends State<EditTripScreen> {
     _destinationController.dispose();
     _departureController.dispose();
     _returnController.dispose();
+    _activityTitleController.dispose();
+    _activityTimeController.dispose();
     super.dispose();
   }
 
   Future<void> _handleUpdate() async {
     setState(() => _isLoading = true);
     
-    // Simplistic parsing for this demo (should use proper date pickers)
-    final updatedTrip = TripModel(
-      id: widget.trip.id,
-      userId: widget.trip.userId,
+    final updatedTrip = widget.trip.copyWith(
       destination: _destinationController.text,
-      countryCode: widget.trip.countryCode,
-      countryName: widget.trip.countryName,
-      startDate: widget.trip.startDate, // Keep original for demo simplicity
-      endDate: widget.trip.endDate,
       partySize: _travelers,
-      notes: widget.trip.notes,
-      status: widget.trip.status,
-      budget: widget.trip.budget,
-      expenses: widget.trip.expenses,
-      itinerary: widget.trip.itinerary,
-      destinationInfo: widget.trip.destinationInfo,
+      itinerary: _itinerary,
     );
 
     final success = await context.read<TripProvider>().updateTrip(widget.trip.id, updatedTrip);
@@ -95,7 +90,6 @@ class _EditTripScreenState extends State<EditTripScreen> {
         setState(() => _isLoading = false);
         if (success) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Trip deleted.')));
         }
       }
     }
@@ -136,7 +130,7 @@ class _EditTripScreenState extends State<EditTripScreen> {
             const SizedBox(height: 8),
             Text('MANAGE DETAILS', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
             
-            const SizedBox(height: 48),
+            const SizedBox(height: 32),
             _buildFieldLabel('DESTINATION'),
             _buildUnderlineTextField(_destinationController),
             
@@ -185,6 +179,11 @@ class _EditTripScreenState extends State<EditTripScreen> {
             ),
             const Divider(color: Color(0xFFE2E8F0), thickness: 1),
             
+            const SizedBox(height: 32),
+            _buildFieldLabel('MANAGE ITINERARY'),
+            const SizedBox(height: 8),
+            _buildItinerarySection(),
+            
             const SizedBox(height: 48),
             SizedBox(
               width: double.infinity,
@@ -200,7 +199,7 @@ class _EditTripScreenState extends State<EditTripScreen> {
               ),
             ),
             
-            const SizedBox(height: 48),
+            const SizedBox(height: 40),
             SizedBox(
               width: double.infinity,
               height: 60,
@@ -214,13 +213,6 @@ class _EditTripScreenState extends State<EditTripScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
-            ),
-            
-            const SizedBox(height: 24),
-            Text(
-              'WARNING: THIS ACTION IS PERMANENT AND CANNOT BE UNDONE.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w500, color: const Color(0xFF94A3B8), letterSpacing: 0.5, height: 1.5),
             ),
             const SizedBox(height: 40),
           ],
@@ -248,5 +240,60 @@ class _EditTripScreenState extends State<EditTripScreen> {
         contentPadding: EdgeInsets.symmetric(vertical: 8),
       ),
     );
+  }
+
+  Widget _buildItinerarySection() {
+    return Column(
+      children: [
+        ..._itinerary.map((act) => _buildActivityTile(act)),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFF1F5F9))),
+          child: Column(
+            children: [
+              TextField(
+                controller: _activityTitleController,
+                decoration: const InputDecoration(hintText: 'Activity title', border: InputBorder.none),
+                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              Row(
+                children: [
+                  Expanded(child: TextField(controller: _activityTimeController, decoration: const InputDecoration(hintText: 'Time', border: InputBorder.none))),
+                  TextButton(onPressed: _addActivity, child: const Text('Add')),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActivityTile(ItineraryActivity act) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('${act.time} - ${act.title}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+          IconButton(onPressed: () => setState(() => _itinerary.remove(act)), icon: const Icon(Icons.close, size: 16)),
+        ],
+      ),
+    );
+  }
+
+  void _addActivity() {
+    if (_activityTitleController.text.isEmpty) return;
+    setState(() {
+      _itinerary.add(ItineraryActivity(title: _activityTitleController.text, time: _activityTimeController.text, location: ''));
+      _activityTitleController.clear();
+      _activityTimeController.clear();
+    });
   }
 }

@@ -46,6 +46,8 @@ dependencies:
   
   # Barcode
   mobile_scanner: ^6.0.2
+  flutter_tts: ^4.2.5
+  translator: ^1.0.4+1
 
 dev_dependencies:
   flutter_test:

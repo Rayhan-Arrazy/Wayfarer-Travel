@@ -28,15 +28,17 @@ router.post('/', auth, async (req, res) => {
   try {
     const { tripId, title, note, location, weather, photos, mood } = req.body;
 
-    // Verify trip belongs to user
-    const trip = await Trip.findOne({ _id: tripId, userId: req.user._id });
-    if (!trip) {
-      return res.status(404).json({ message: 'Trip not found' });
+    // Verify trip belongs to user if tripId is provided
+    if (tripId && tripId.trim() !== '') {
+      const trip = await Trip.findOne({ _id: tripId, userId: req.user._id });
+      if (!trip) {
+        return res.status(404).json({ message: 'Trip not found' });
+      }
     }
 
     const entry = new JournalEntry({
       userId: req.user._id,
-      tripId,
+      tripId: (tripId && tripId.trim() !== '') ? tripId : null,
       title: title || '',
       note: note || '',
       location: location || {},
@@ -93,6 +95,11 @@ router.get('/stats', auth, async (req, res) => {
 // @desc    Update a journal entry
 router.put('/:id', auth, async (req, res) => {
   try {
+    // Sanitize tripId if it's an empty string to avoid CastError
+    if (req.body.tripId === '' || req.body.tripId === 'null') {
+      req.body.tripId = null;
+    }
+
     const entry = await JournalEntry.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
       { $set: req.body },

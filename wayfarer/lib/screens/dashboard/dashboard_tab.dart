@@ -79,7 +79,10 @@ class _DashboardTabState extends State<DashboardTab> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Essential Helpers', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                      TextButton(onPressed: () {}, child: Text('Manage Tools', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C)))),
+                      TextButton(onPressed: () {
+                        // Navigate to Tools tab via the main dashboard controller or direct route
+                         Navigator.pushNamed(context, AppRoutes.tools);
+                      }, child: Text('Manage Tools', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C)))),
                     ],
                   ),
                   const SizedBox(height: 12),

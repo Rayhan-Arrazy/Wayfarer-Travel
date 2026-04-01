@@ -46,8 +46,8 @@ async function seed() {
         visitedCountries: ['PT', 'ES', 'FR'],
       },
       {
-        name: 'Sarah Jenkins',
-        email: 'admin@wayfarer.com',
+        name: 'Rayhan Arrazy',
+        email: 'rayhan@wayfarer.com',
         password: 'password123',
         role: 'admin',
         homeCurrency: 'USD',
@@ -105,12 +105,12 @@ async function seed() {
     console.log(`--- ${trips.length} TRIPS CREATED ---`);
 
     // 3. Create Journal Entries
-    await JournalEntry.create([
+    const journals = await JournalEntry.create([
       {
         userId: elias._id,
         tripId: trips[0]._id,
         title: 'Summit of Pico do Arieiro',
-        note: 'The air at the summit of Pico do Arieiro felt like ice, but the sunrise broke through the clouds in shards of liquid gold.',
+        note: 'The air at the summit of Pico do Arieiro felt like ice, but the sunrise broke through the clouds in shards of liquid gold. One of the most breathtaking views I have ever seen.',
         location: { lat: 32.7355, lng: -16.9287, name: 'Pico do Arieiro', country: 'Portugal' },
         mood: 'Amazing',
         weather: { temp: 4, description: 'Frozen Sunrise', icon: '01d' },
@@ -120,11 +120,46 @@ async function seed() {
       {
         userId: elias._id,
         tripId: trips[0]._id,
+        title: 'Funchal Market Morning',
+        note: 'The colors at Mercado dos Lavradores are intense. Exotic fruits I have never seen before, and the smell of fresh flowers everywhere.',
+        location: { lat: 32.6487, lng: -16.9075, name: 'Mercado dos Lavradores', country: 'Portugal' },
+        mood: 'Happy',
+        weather: { temp: 22, description: 'Sunny', icon: '01d' },
+        photos: [{ url: 'https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b', caption: 'Fruit Stall' }],
+        distanceTraveled: 3.2,
+      },
+      {
+        userId: elias._id,
+        tripId: trips[1]._id,
         title: 'A Quiet Morning in Gion',
         note: 'The morning mist was still clinging to the wooden facades of the tea houses. I found a small bench near the Tatsumi Bridge and just listened to the water.',
         location: { lat: 35.0037, lng: 135.7785, name: 'Gion District', country: 'Japan' },
-        mood: 'Adventurous',
+        mood: 'Peaceful',
         weather: { temp: 12, description: 'Foggy Morning', icon: '50d' },
+        photos: [{ url: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e', caption: 'Gion Mist' }],
+        distanceTraveled: 2.1,
+      },
+      {
+        userId: elias._id,
+        tripId: trips[1]._id,
+        title: 'Fushimi Inari Hike',
+        note: 'Walking through the thousands of vermilion torii gates was mystical. The higher I got, the quieter it became. My legs are sore but it was worth it.',
+        location: { lat: 34.9671, lng: 135.7727, name: 'Fushimi Inari Shrine', country: 'Japan' },
+        mood: 'Adventurous',
+        weather: { temp: 15, description: 'Clear Sky', icon: '01d' },
+        photos: [{ url: 'https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d', caption: 'Torii Gates' }],
+        distanceTraveled: 8.4,
+      },
+      {
+        userId: elias._id,
+        tripId: trips[1]._id,
+        title: 'Evening in Pontocho',
+        note: 'Had the most incredible ramen in a narrow alley. The atmosphere in Pontocho at night with the lanterns is magical.',
+        location: { lat: 35.0042, lng: 135.7708, name: 'Pontocho Alley', country: 'Japan' },
+        mood: 'Happy',
+        weather: { temp: 14, description: 'Cloudy', icon: '03d' },
+        photos: [{ url: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb', caption: 'Night lanterns' }],
+        distanceTraveled: 1.5,
       }
     ]);
     console.log('--- JOURNAL ENTRIES CREATED ---');

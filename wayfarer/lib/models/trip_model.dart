@@ -12,8 +12,6 @@ class TripModel {
   final List<ItineraryActivity> itinerary;
   final String notes;
   final String status;
-  final TripBudget budget;
-  final List<TripExpense> expenses;
   final DestinationInfo? destinationInfo;
   final DateTime createdAt;
 
@@ -31,12 +29,9 @@ class TripModel {
     this.itinerary = const [],
     this.notes = '',
     this.status = 'planning',
-    TripBudget? budget,
-    this.expenses = const [],
     this.destinationInfo,
     DateTime? createdAt,
-  }) : budget = budget ?? TripBudget(),
-       createdAt = createdAt ?? DateTime.now();
+  }) : createdAt = createdAt ?? DateTime.now();
 
   int get durationDays => endDate.difference(startDate).inDays;
   bool get isActive => status == 'active';
@@ -67,10 +62,6 @@ class TripModel {
           .toList() ?? [],
       notes: json['notes'] ?? '',
       status: json['status'] ?? 'planning',
-      budget: json['budget'] != null ? TripBudget.fromJson(json['budget']) : TripBudget(),
-      expenses: (json['expenses'] as List<dynamic>?)
-          ?.map((e) => TripExpense.fromJson(e))
-          .toList() ?? [],
       destinationInfo: json['destinationInfo'] != null
           ? DestinationInfo.fromJson(json['destinationInfo'])
           : null,
@@ -85,10 +76,44 @@ class TripModel {
     'endDate': endDate.toIso8601String(),
     'partySize': partySize,
     'notes': notes,
-    'budget': budget.toJson(),
-    'expenses': expenses.map((e) => e.toJson()).toList(),
     'itinerary': itinerary.map((e) => e.toJson()).toList(),
   };
+
+  TripModel copyWith({
+    String? id,
+    String? userId,
+    String? destination,
+    String? countryCode,
+    String? countryName,
+    DateTime? startDate,
+    DateTime? endDate,
+    int? partySize,
+    String? coverImage,
+    List<ChecklistItem>? checklist,
+    List<ItineraryActivity>? itinerary,
+    String? notes,
+    String? status,
+    DestinationInfo? destinationInfo,
+    DateTime? createdAt,
+  }) {
+    return TripModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      destination: destination ?? this.destination,
+      countryCode: countryCode ?? this.countryCode,
+      countryName: countryName ?? this.countryName,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      partySize: partySize ?? this.partySize,
+      coverImage: coverImage ?? this.coverImage,
+      checklist: checklist ?? this.checklist,
+      itinerary: itinerary ?? this.itinerary,
+      notes: notes ?? this.notes,
+      status: status ?? this.status,
+      destinationInfo: destinationInfo ?? this.destinationInfo,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
 
 class ItineraryActivity {
@@ -218,11 +243,16 @@ class TripExpense {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    '_id': id,
-    'title': title,
-    'amount': amount,
-    'date': date.toIso8601String(),
-    'category': category,
-  };
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'title': title,
+      'amount': amount,
+      'date': date.toIso8601String(),
+      'category': category,
+    };
+    if (id.isNotEmpty) {
+      map['_id'] = id;
+    }
+    return map;
+  }
 }

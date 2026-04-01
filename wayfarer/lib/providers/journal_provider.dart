@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
 import '../models/journal_model.dart';
-import '../config/constants.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
 
 class JournalProvider with ChangeNotifier {
-  final Dio _dio = Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
+  final ApiService _apiService = ApiService();
   List<JournalEntryModel> _entries = [];
   bool _isLoading = false;
 
@@ -17,19 +15,7 @@ class JournalProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(AppConstants.tokenKey);
-      
-      if (token == null) return;
-
-      final queryParams = <String, dynamic>{};
-      if (tripId != null) queryParams['tripId'] = tripId;
-
-      final response = await _dio.get(
-        '/journal',
-        queryParameters: queryParams,
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
+      final response = await _apiService.getJournalEntries(tripId: tripId);
 
       if (response.statusCode == 200) {
         _entries = (response.data as List).map((e) => JournalEntryModel.fromJson(e)).toList();
@@ -44,15 +30,7 @@ class JournalProvider with ChangeNotifier {
 
   Future<bool> createEntry(JournalEntryModel entry) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(AppConstants.tokenKey);
-      if (token == null) return false;
-
-      final response = await _dio.post(
-        '/journal',
-        data: entry.toJson(),
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
+      final response = await _apiService.createJournalEntry(entry.toJson());
 
       if (response.statusCode == 201) {
         await fetchEntries();
@@ -67,15 +45,7 @@ class JournalProvider with ChangeNotifier {
 
   Future<bool> updateEntry(String id, JournalEntryModel entry) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(AppConstants.tokenKey);
-      if (token == null) return false;
-
-      final response = await _dio.put(
-        '/journal/$id',
-        data: entry.toJson(),
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
+      final response = await _apiService.updateJournalEntry(id, entry.toJson());
 
       if (response.statusCode == 200) {
         await fetchEntries();
@@ -90,14 +60,7 @@ class JournalProvider with ChangeNotifier {
 
   Future<bool> deleteEntry(String id) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(AppConstants.tokenKey);
-      if (token == null) return false;
-
-      final response = await _dio.delete(
-        '/journal/$id',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
+      final response = await _apiService.deleteJournalEntry(id);
 
       if (response.statusCode == 200) {
         await fetchEntries();

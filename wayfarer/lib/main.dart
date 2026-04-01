@@ -6,8 +6,9 @@ import 'config/routes.dart';
 import 'providers/auth_provider.dart';
 import 'providers/trip_provider.dart';
 import 'providers/journal_provider.dart';
+import 'providers/budget_provider.dart';
 import 'providers/guide_provider.dart';
-
+import 'providers/currency_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -28,9 +29,11 @@ class WayfarerApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
-        ChangeNotifierProvider(create: (_) => TripProvider()),
-        ChangeNotifierProvider(create: (_) => JournalProvider()),
+        ChangeNotifierProvider(create: (_) => TripProvider()..fetchTrips()),
+        ChangeNotifierProvider(create: (_) => JournalProvider()..fetchEntries()),
         ChangeNotifierProvider(create: (_) => GuideProvider()),
+        ChangeNotifierProvider(create: (_) => CurrencyProvider()..fetchRates()),
+        ChangeNotifierProvider(create: (_) => BudgetProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, auth, _) {
@@ -40,7 +43,7 @@ class WayfarerApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             routes: AppRoutes.routes,
             onGenerateRoute: AppRoutes.onGenerateRoute,
-            initialRoute: AppRoutes.home,
+            initialRoute: AppRoutes.root,
           );
         },
       ),

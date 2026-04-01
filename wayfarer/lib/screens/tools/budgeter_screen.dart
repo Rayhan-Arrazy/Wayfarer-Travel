@@ -3,8 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/trip_provider.dart';
-import '../../models/trip_model.dart';
+import '../../providers/budget_provider.dart';
+import '../../models/budget_model.dart';
 import '../../config/routes.dart';
+import '../../widgets/loading_widget.dart';
 
 class BudgeterScreen extends StatefulWidget {
   const BudgeterScreen({super.key});
@@ -16,44 +18,75 @@ class BudgeterScreen extends StatefulWidget {
 class _BudgeterScreenState extends State<BudgeterScreen> {
   
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<BudgetProvider>().fetchBudgets();
+      context.read<TripProvider>().fetchTrips();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final tp = context.watch<TripProvider>();
-    final trip = tp.upcomingTrip;
+    final bp = context.watch<BudgetProvider>();
+    
+    if (tp.isLoading || bp.isLoading) return const LoadingWidget();
 
+    final trip = tp.upcomingTrip;
     if (trip == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Budgeter')),
-        body: const Center(child: Text('No active trip found to track budget.')),
+        body: const Center(child: Text('No active trip found. Create a trip first!')),
       );
     }
 
-    final totalBudget = trip.budget.amount;
-    final totalSpent = trip.expenses.fold<double>(0, (sum, item) => sum + item.amount);
+    final budget = bp.getBudgetForTrip(trip.id);
+
+    if (budget == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(title: const Text('Budgeter')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('No budget started for this trip.'),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => _showAddBudgetDialog(context, trip), 
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF132F5C),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('Start Budgeting', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final totalBudget = budget.amount;
+    final totalSpent = budget.expenses.fold<double>(0, (sum, item) => sum + item.amount);
     final remaining = totalBudget - totalSpent;
     final progress = totalBudget > 0 ? (totalSpent / totalBudget).clamp(0.0, 1.0) : 0.0;
-    final dailyAvg = trip.expenses.isEmpty ? 0.0 : totalSpent / trip.durationDays.clamp(1, 365);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        leadingWidth: 100,
-        leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            margin: const EdgeInsets.only(left: 24, top: 10, bottom: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5),
-            ),
-            child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
-          ),
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF132F5C)),
         ),
-        title: Text('Trip Budget', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: const Color(0xFF1E2E46))),
-        titleSpacing: 0,
-        centerTitle: false,
+        title: Text('The Wayfarer', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF1D4E89))),
+        centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(onPressed: () {}, icon: const Icon(Icons.person, color: Color(0xFF132F5C))),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -62,9 +95,25 @@ class _BudgeterScreenState extends State<BudgeterScreen> {
           children: [
             Text('CURRENT TRIP BUDGET', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.2)),
             const SizedBox(height: 8),
-            Text('\$${totalBudget.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 48, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A), height: 1.0)),
-            const SizedBox(height: 8),
-            Text('Total allocation for ${trip.destination}', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('\$${totalBudget.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 48, fontWeight: FontWeight.w800, color: const Color(0xFF1D4E89).withValues(alpha: 0.8), height: 1.0)),
+                    const SizedBox(height: 8),
+                    Text('Total allocation for ${budget.title}', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
+                  ],
+                ),
+                TextButton.icon(
+                  onPressed: () => _handleEditBudgetLimit(budget), 
+                  icon: const Icon(Icons.edit, size: 16, color: Color(0xFF132F5C)),
+                  label: Text('Edit', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C)))
+                ),
+              ],
+            ),
             
             const SizedBox(height: 32),
             
@@ -72,60 +121,32 @@ class _BudgeterScreenState extends State<BudgeterScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: const Color(0xFFF1F5F9).withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFF1F5F9)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('REMAINING', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.0)),
-                      Text('${(progress * 100).toStringAsFixed(0)}% USED', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: progress > 0.9 ? Colors.red : const Color(0xFF1E40AF))),
-                    ],
-                  ),
+                  Text('REMAINING', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.0)),
                   const SizedBox(height: 8),
-                  Text('\$${remaining.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: remaining < 0 ? Colors.red : const Color(0xFF1E293B))),
+                  Text('\$${remaining.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
                   const SizedBox(height: 16),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: progress,
-                      minHeight: 8,
-                      backgroundColor: const Color(0xFFF1F5F9),
-                      color: progress > 0.9 ? Colors.red : const Color(0xFF1E40AF),
+                      minHeight: 6,
+                      backgroundColor: const Color(0xFFE2E8F0),
+                      color: const Color(0xFF132F5C),
                     ),
                   ),
                 ],
               ),
             ),
             
-            const SizedBox(height: 32),
+            const SizedBox(height: 48),
             
-            // Daily Average Card
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Daily Average', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
-                  const SizedBox(height: 12),
-                  Text('\$${dailyAvg.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w800, color: const Color(0xFF1E40AF))),
-                  const SizedBox(height: 4),
-                  Text('Average spending per day across ${trip.durationDays} days.', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B))),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 40),
-            
-            // Recent Entries
+            // Recent Entries Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -133,81 +154,95 @@ class _BudgeterScreenState extends State<BudgeterScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(color: const Color(0xFFDBEAFE), borderRadius: BorderRadius.circular(4)),
-                  child: Text('LOGBOOK', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF1E40AF))),
+                  child: Text(DateFormat('MMMM yyyy').format(DateTime.now()).toUpperCase(), style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF1E40AF))),
                 ),
               ],
             ),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             
-            if (trip.expenses.isEmpty)
+            if (budget.expenses.isEmpty)
               Center(child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 40),
                 child: Text('No expenses recorded yet.', style: GoogleFonts.inter(color: Colors.grey)),
               ))
             else
-              ...trip.expenses.reversed.map((e) => _buildEntryItem(e, trip)),
+              ...budget.expenses.reversed.map((e) => _buildEntryItem(e, budget)),
             
-            const SizedBox(height: 60),
+            const SizedBox(height: 24),
+            const SizedBox(height: 100),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.pushNamed(context, AppRoutes.expenseForm, arguments: {'tripId': trip.id}),
-        backgroundColor: const Color(0xFF0F172A),
-        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () => Navigator.pushNamed(context, AppRoutes.expenseForm, arguments: {'budgetId': budget.id}),
+        backgroundColor: const Color(0xFF132F5C).withOpacity(0.8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
     );
   }
 
-  Widget _buildEntryItem(TripExpense expense, TripModel trip) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24.0),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFF1F5F9)),
+  Future<void> _showAddBudgetDialog(BuildContext context, dynamic trip) async {
+    final controller = TextEditingController(text: '1000');
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Start Budget for ${trip.destination}'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Amount (\$)', prefixIcon: Icon(Icons.attach_money)),
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCEL')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('START')),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      final amount = double.tryParse(controller.text) ?? 0;
+      final bp = context.read<BudgetProvider>();
+      final success = await bp.createBudget(BudgetModel(
+        id: '',
+        userId: '',
+        tripId: trip.id,
+        title: trip.destination,
+        amount: amount,
+      ));
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Budget created successfully!')));
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to create budget.')));
+      }
+    }
+  }
+
+  Widget _buildEntryItem(BudgetExpense expense, BudgetModel budget) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 32.0),
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, AppRoutes.expenseForm, arguments: {'budgetId': budget.id, 'expense': expense}),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
-              child: const Icon(Icons.receipt_long, color: Color(0xFF64748B), size: 20),
-            ),
-            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(expense.title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                  const SizedBox(height: 2),
-                  Text(DateFormat('MMM d, h:mm a').format(expense.date), style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8))),
+                  Text(expense.title, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                  const SizedBox(height: 4),
+                  Text('${DateFormat('MMM d, h:mm a').format(expense.date)}', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8))),
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text('\$${expense.amount.toStringAsFixed(2)}', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, AppRoutes.expenseForm, arguments: {'tripId': trip.id, 'expense': expense}),
-                      child: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF64748B)),
-                    ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () => _handleDeleteExpense(trip, expense),
-                      child: const Icon(Icons.delete_outline, size: 16, color: Color(0xFF991B1B)),
-                    ),
-                  ],
-                ),
-              ],
+            Text('\$${expense.amount.toStringAsFixed(2)}', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+            const SizedBox(width: 16),
+            GestureDetector(
+              onTap: () => _handleDeleteExpense(budget, expense),
+              child: const Icon(Icons.delete_outline, size: 20, color: Color(0xFF991B1B)),
             ),
           ],
         ),
@@ -215,38 +250,48 @@ class _BudgeterScreenState extends State<BudgeterScreen> {
     );
   }
 
-  Future<void> _handleDeleteExpense(TripModel trip, TripExpense expense) async {
-    final confirm = await showDialog<bool>(
+  Future<void> _handleEditBudgetLimit(BudgetModel budget) async {
+    final controller = TextEditingController(text: budget.amount.toString());
+    final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Expense'),
-        content: const Text('Remove this entry from your travel budget?'),
+        title: const Text('Update Total Budget'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Amount (\$)', prefixIcon: Icon(Icons.attach_money)),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCEL')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('UPDATE')),
         ],
       ),
     );
 
-    if (confirm == true && mounted) {
-      final updatedExpenses = trip.expenses.where((e) => e.id != expense.id).toList();
-      final updatedTrip = TripModel(
-        id: trip.id,
-        userId: trip.userId,
-        destination: trip.destination,
-        countryCode: trip.countryCode,
-        countryName: trip.countryName,
-        startDate: trip.startDate,
-        endDate: trip.endDate,
-        partySize: trip.partySize,
-        notes: trip.notes,
-        status: trip.status,
-        budget: trip.budget,
-        expenses: updatedExpenses,
-        itinerary: trip.itinerary,
-        destinationInfo: trip.destinationInfo,
-      );
-      await context.read<TripProvider>().updateTrip(trip.id, updatedTrip);
+    if (result == true) {
+      final amount = double.tryParse(controller.text) ?? 0;
+      final updatedBudget = budget.copyWith(amount: amount);
+      await context.read<BudgetProvider>().updateBudget(budget.id, updatedBudget);
+    }
+  }
+
+  Future<void> _handleDeleteExpense(BudgetModel budget, BudgetExpense expense) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Expense?'),
+        content: const Text('This will permanently remove this entry.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCEL')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('DELETE')),
+        ],
+      )
+    );
+
+    if (confirm == true) {
+      final updatedExpenses = budget.expenses.where((e) => e.id != expense.id).toList();
+      final updatedBudget = budget.copyWith(expenses: updatedExpenses);
+      await context.read<BudgetProvider>().updateBudget(budget.id, updatedBudget);
     }
   }
 }

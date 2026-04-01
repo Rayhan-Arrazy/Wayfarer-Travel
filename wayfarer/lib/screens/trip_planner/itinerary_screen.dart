@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import 'package:provider/provider.dart';
+import '../../providers/trip_provider.dart';
+import '../../models/trip_model.dart';
 import 'activity_form_screen.dart';
 
 class ItineraryScreen extends StatefulWidget {
@@ -14,31 +16,20 @@ class ItineraryScreen extends StatefulWidget {
 class _ItineraryScreenState extends State<ItineraryScreen> {
   int _selectedDay = 0;
 
-  final List<Map<String, dynamic>> _activities = [
-    {
-      'time': '09:00 AM',
-      'title': 'Design Museum Danmark',
-      'desc': 'Explore the evolution of Danish furniture and graphic design in this restored rococo building. Focus on the Kaare Klint furniture collection.',
-    },
-    {
-      'time': '12:30 PM',
-      'title': 'TorvehallerneKBH',
-      'desc': 'Experience the vibrant food market. Highly recommend traditional Smørrebrød from Hallernes and fresh coffee from The Coffee Collective.',
-    },
-    {
-      'time': '03:00 PM',
-      'title': 'The Black Diamond',
-      'desc': 'Royal Library extension featuring striking neo-modernist architecture. Walk through the central atrium for harbor views and light play.',
-    },
-    {
-      'time': '07:30 PM',
-      'title': 'Dinner at Høst',
-      'desc': 'Award-winning New Nordic cuisine in a rustic, beautifully designed space. Set menu focusing on seasonal Scandinavian ingredients.',
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final tp = context.watch<TripProvider>();
+    final trip = tp.upcomingTrip;
+
+    if (trip == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Itinerary Maker', style: GoogleFonts.outfit())),
+        body: const Center(child: Text('No active trip found for itinerary.')),
+      );
+    }
+
+    final activities = trip.itinerary;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -55,11 +46,11 @@ class _ItineraryScreenState extends State<ItineraryScreen> {
             child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
           ),
         ),
-        title: Text('Trip Budget', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: const Color(0xFF1E2E46))),
+        title: Text('Itinerary Maker', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: const Color(0xFF1E2E46))),
         titleSpacing: 0,
         centerTitle: false,
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.search, color: AppTheme.primaryColor)),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.search, color: Color(0xFF1E2E46))),
           const Padding(
             padding: EdgeInsets.only(right: 16.0),
             child: CircleAvatar(
@@ -82,11 +73,11 @@ class _ItineraryScreenState extends State<ItineraryScreen> {
               children: [
                 Text('ACTIVE JOURNEY', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
                 const SizedBox(height: 8),
-                Text('Copenhagen Discovery', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                Text(trip.destination, style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
                 const SizedBox(height: 12),
                 Text(
-                  'A minimalist curation of Scandinavian design, culinary highlights, and maritime history across three curated days.',
-                  style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary, height: 1.5),
+                  trip.notes.isNotEmpty ? trip.notes : 'A minimalist curation of travel Waypoints for your journey.',
+                  style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B), height: 1.5),
                 ),
               ],
             ),
@@ -110,44 +101,62 @@ class _ItineraryScreenState extends State<ItineraryScreen> {
           ),
           
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(24),
-              itemCount: _activities.length,
-              itemBuilder: (ctx, i) {
-                final act = _activities[i];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 40.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 80,
-                        child: Text(act['time'], style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+            child: activities.isEmpty 
+              ? Center(child: Text('No activities added yet.', style: GoogleFonts.inter(color: Colors.grey)))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(24),
+                  itemCount: activities.length,
+                  itemBuilder: (ctx, i) {
+                    final act = activities[i];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 40.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 80,
+                            child: Text(act.time, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(child: Text(act.title, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)))),
+                                    GestureDetector(
+                                      onTap: () => _handleDeleteActivity(context, trip, act),
+                                      child: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFB91C1C)),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(act.location, style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B), height: 1.5)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(act['title'], style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                            const SizedBox(height: 8),
-                            Text(act['desc'], style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary, height: 1.5)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openActivityForm(context),
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ActivityFormScreen(initialData: {'tripId': trip.id}))),
         backgroundColor: const Color(0xFF1E2E46),
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
+  }
+
+  Future<void> _handleDeleteActivity(BuildContext context, TripModel trip, ItineraryActivity activity) async {
+    final tp = context.read<TripProvider>();
+    final updatedItinerary = trip.itinerary.where((a) => a.title != activity.title).toList();
+    final updatedTrip = trip.copyWith(itinerary: updatedItinerary);
+    await tp.updateTrip(trip.id, updatedTrip);
   }
 
   Widget _buildDayTab(int index, String label) {
@@ -166,9 +175,4 @@ class _ItineraryScreenState extends State<ItineraryScreen> {
       ),
     );
   }
-
-  void _openActivityForm(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityFormScreen()));
-  }
-
 }

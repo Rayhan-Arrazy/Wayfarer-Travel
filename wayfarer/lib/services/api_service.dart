@@ -48,7 +48,7 @@ class ApiService {
 
   // Auth
   Future<Response> register(String name, String email, String password, {String? homeCurrency, String? homeCountry}) async {
-    return _dio.post('/auth/register', data: {
+    return _dio.post('auth/register', data: {
       'name': name,
       'email': email,
       'password': password,
@@ -58,7 +58,7 @@ class ApiService {
   }
 
   Future<Response> login(String email, String password) async {
-    return _dio.post('/auth/login', data: {
+    return _dio.post('auth/login', data: {
       'email': email,
       'password': password,
     });
@@ -83,50 +83,71 @@ class ApiService {
   Future<Response> getTrips({String? status}) async {
     final params = <String, dynamic>{};
     if (status != null) params['status'] = status;
-    return _dio.get('/trips', queryParameters: params);
+    return _dio.get('trips', queryParameters: params);
   }
 
   Future<Response> getTrip(String id) async {
-    return _dio.get('/trips/$id');
+    return _dio.get('trips/$id');
   }
 
   Future<Response> createTrip(Map<String, dynamic> data) async {
-    return _dio.post('/trips', data: data);
+    return _dio.post('trips', data: data);
   }
 
   Future<Response> updateTrip(String id, Map<String, dynamic> data) async {
-    return _dio.put('/trips/$id', data: data);
+    return _dio.put('trips/$id', data: data);
   }
 
   Future<Response> toggleChecklistItem(String tripId, int itemIndex) async {
-    return _dio.put('/trips/$tripId/checklist/$itemIndex');
+    return _dio.put('trips/$tripId/checklist/$itemIndex');
   }
 
   Future<Response> deleteTrip(String id) async {
-    return _dio.delete('/trips/$id');
+    return _dio.delete('trips/$id');
   }
 
   // Journal
   Future<Response> getJournalEntries({String? tripId}) async {
     final params = <String, dynamic>{};
     if (tripId != null) params['tripId'] = tripId;
-    return _dio.get('/journal', queryParameters: params);
+    return _dio.get('journal', queryParameters: params);
   }
 
   Future<Response> createJournalEntry(Map<String, dynamic> data) async {
-    return _dio.post('/journal', data: data);
+    return _dio.post('journal', data: data);
   }
 
   Future<Response> updateJournalEntry(String id, Map<String, dynamic> data) async {
-    return _dio.put('/journal/$id', data: data);
+    return _dio.put('journal/$id', data: data);
   }
 
   Future<Response> deleteJournalEntry(String id) async {
-    return _dio.delete('/journal/$id');
+    return _dio.delete('journal/$id');
   }
 
   Future<Response> getJournalStats() async {
-    return _dio.get('/journal/stats');
+    return _dio.get('journal/stats');
+  }
+
+  // Budgets (Standalone)
+  Future<Response> getBudgets() async {
+    return _dio.get('budgets');
+  }
+
+  Future<Response> getBudget(String id) async {
+    return _dio.get('budgets/$id');
+  }
+
+  Future<Response> createBudget(Map<String, dynamic> data) async {
+    return _dio.post('budgets', data: data);
+  }
+
+  Future<Response> updateBudget(String id, Map<String, dynamic> data) async {
+    return _dio.put('budgets/$id', data: data);
+  }
+
+  Future<Response> deleteBudget(String id) async {
+    return _dio.delete('budgets/$id');
   }
 
   // Favorites

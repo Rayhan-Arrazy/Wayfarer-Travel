@@ -20,9 +20,16 @@ class AuthProvider extends ChangeNotifier {
   bool get isAdmin => _user?.isAdmin ?? false;
 
   Future<void> init() async {
-    await _apiService.init();
-    if (_apiService.token != null) {
-      await loadUser();
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _apiService.init();
+      if (_apiService.token != null) {
+        await loadUser();
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 

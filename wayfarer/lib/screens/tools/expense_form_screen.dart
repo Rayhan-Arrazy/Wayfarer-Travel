@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../providers/trip_provider.dart';
-import '../../models/trip_model.dart';
+import '../../providers/budget_provider.dart';
+import '../../models/budget_model.dart';
 
 class ExpenseFormScreen extends StatefulWidget {
   final Map<String, dynamic>? initialData;
@@ -23,7 +23,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   @override
   void initState() {
     super.initState();
-    final expense = widget.initialData?['expense'] as TripExpense?;
+    final expense = widget.initialData?['expense'] as BudgetExpense?;
     _isEdit = expense != null;
     _nameController = TextEditingController(text: expense?.title ?? '');
     _amountController = TextEditingController(text: expense?.amount.toString() ?? '');
@@ -40,9 +40,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   Future<void> _handleSave() async {
     final title = _nameController.text;
     final amountStr = _amountController.text;
-    final tripId = widget.initialData?['tripId'] as String?;
+    final budgetId = widget.initialData?['budgetId'] as String?;
 
-    if (title.isEmpty || amountStr.isEmpty || tripId == null) {
+    if (title.isEmpty || amountStr.isEmpty || budgetId == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all fields!')));
       return;
     }
@@ -55,15 +55,15 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
 
     setState(() => _isLoading = true);
     
-    final tp = context.read<TripProvider>();
-    final trip = tp.trips.firstWhere((t) => t.id == tripId);
+    final bp = context.read<BudgetProvider>();
+    final budget = bp.budgets.firstWhere((b) => b.id == budgetId);
     
-    List<TripExpense> updatedExpenses = List.from(trip.expenses);
+    List<BudgetExpense> updatedExpenses = List.from(budget.expenses);
     if (_isEdit) {
-      final oldExpense = widget.initialData!['expense'] as TripExpense;
+      final oldExpense = widget.initialData!['expense'] as BudgetExpense;
       final index = updatedExpenses.indexWhere((e) => e.id == oldExpense.id);
       if (index != -1) {
-        updatedExpenses[index] = TripExpense(
+        updatedExpenses[index] = BudgetExpense(
           id: oldExpense.id,
           title: title,
           amount: amount,
@@ -72,31 +72,16 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         );
       }
     } else {
-      updatedExpenses.add(TripExpense(
+      updatedExpenses.add(BudgetExpense(
         title: title,
         amount: amount,
         date: _selectedDate,
       ));
     }
 
-    final updatedTrip = TripModel(
-      id: trip.id,
-      userId: trip.userId,
-      destination: trip.destination,
-      countryCode: trip.countryCode,
-      countryName: trip.countryName,
-      startDate: trip.startDate,
-      endDate: trip.endDate,
-      partySize: trip.partySize,
-      notes: trip.notes,
-      status: trip.status,
-      budget: trip.budget,
-      expenses: updatedExpenses,
-      itinerary: trip.itinerary,
-      destinationInfo: trip.destinationInfo,
-    );
+    final updatedBudget = budget.copyWith(expenses: updatedExpenses);
 
-    final success = await tp.updateTrip(tripId, updatedTrip);
+    final success = await bp.updateBudget(budgetId, updatedBudget);
     
     if (mounted) {
       setState(() => _isLoading = false);
@@ -114,24 +99,22 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        leadingWidth: 100,
-        leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            margin: const EdgeInsets.only(left: 24, top: 10, bottom: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5),
-            ),
-            child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
-          ),
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.close, color: Color(0xFF132F5C)),
         ),
-        title: Text(_isEdit ? 'Edit Expense' : 'Add Expense', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
-        titleSpacing: 0,
+        title: Text(_isEdit ? 'Edit Expense' : 'Add Expense', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF1D4E89))),
         centerTitle: false,
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24.0),
+            child: Center(
+              child: Text('The Wayfarer', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF1D4E89))),
+            ),
+          ),
+        ],
       ),
       body: _isLoading ? const Center(child: CircularProgressIndicator()) : SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -144,14 +127,11 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
             const SizedBox(height: 48),
             
             _buildFieldLabel('Item Name'),
-            _buildTextField(_nameController, 'e.g. Flight to Tokyo'),
+            _buildTextField(_nameController, 'e.g. Artisanal Coffee in Kyoto', null),
             
             const SizedBox(height: 32),
             _buildFieldLabel('Amount'),
-            _buildTextField(_amountController, '0.00', keyboardType: TextInputType.number, prefix: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text('\$', style: TextStyle(fontSize: 18, color: Color(0xFF1E2E46))),
-            )),
+            _buildTextField(_amountController, '0.00', const Icon(Icons.attach_money, size: 18, color: Color(0xFF1E2E46)), keyboardType: TextInputType.number),
             
             const SizedBox(height: 32),
             _buildFieldLabel('Transaction Date'),
@@ -167,12 +147,14 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
               },
               child: Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFF1F5F9))),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today_outlined, size: 20, color: Color(0xFF1E40AF)),
+                    const Icon(Icons.calendar_today_outlined, size: 20, color: Color(0xFF0F172A)),
                     const SizedBox(width: 16),
-                    Text(DateFormat('MMMM d, yyyy').format(_selectedDate), style: GoogleFonts.inter(fontSize: 16, color: const Color(0xFF1E2E46))),
+                    Text(DateFormat('MM/dd/yyyy').format(_selectedDate), style: GoogleFonts.inter(fontSize: 16, color: const Color(0xFF1E2E46))),
+                    const Spacer(),
+                    const Icon(Icons.calendar_today, size: 20, color: Color(0xFF0F172A)),
                   ],
                 ),
               ),
@@ -187,20 +169,40 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
               height: 60,
               child: ElevatedButton.icon(
                 onPressed: _handleSave,
-                icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-                label: Text(_isEdit ? 'Save Changes' : 'Add Expense', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                icon: const Icon(Icons.check_circle, color: Colors.white),
+                label: Text('Save Changes', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E40AF),
+                  backgroundColor: const Color(0xFF47638A),
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
             ),
+            
+            if (_isEdit) ...[
+              const SizedBox(height: 24),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => _handleDelete(widget.initialData!['budgetId'], widget.initialData!['expense']), 
+                  icon: const Icon(Icons.delete, color: Color(0xFF991B1B), size: 18),
+                  label: Text('Delete Item', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF991B1B))),
+                ),
+              ),
+            ],
             const SizedBox(height: 60),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _handleDelete(String budgetId, BudgetExpense expense) async {
+    final bp = context.read<BudgetProvider>();
+    final budget = bp.budgets.firstWhere((b) => b.id == budgetId);
+    final updatedExpenses = budget.expenses.where((e) => e.id != expense.id).toList();
+    final updatedBudget = budget.copyWith(expenses: updatedExpenses);
+    await bp.updateBudget(budgetId, updatedBudget);
+    if (mounted) Navigator.pop(context);
   }
 
   Widget _buildFieldLabel(String label) {
@@ -210,9 +212,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint, {Widget? prefix, TextInputType? keyboardType}) {
+  Widget _buildTextField(TextEditingController controller, String hint, Widget? prefix, {TextInputType? keyboardType}) {
     return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFF1F5F9))),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
@@ -234,7 +236,11 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info, color: Color(0xFF1E40AF), size: 20),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: const Color(0xFFDBEAFE), borderRadius: BorderRadius.circular(4)),
+            child: const Icon(Icons.info, color: Color(0xFF1E40AF), size: 16),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -242,7 +248,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
               children: [
                 Text('Nomad Tip', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
                 const SizedBox(height: 8),
-                Text('Ensure you keep your physical receipts for customs or reimbursement requirements later.', 
+                Text('Most local shops in Gion are cash-only. Ensure you update your physical wallet balance after this entry.', 
                   style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B), height: 1.5)),
               ],
             ),
@@ -252,3 +258,4 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     );
   }
 }
+

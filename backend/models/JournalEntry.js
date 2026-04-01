@@ -9,7 +9,7 @@ const journalEntrySchema = new mongoose.Schema({
   tripId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Trip',
-    required: true,
+    required: false,
   },
   title: {
     type: String,

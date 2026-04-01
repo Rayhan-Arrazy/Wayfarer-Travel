@@ -64,23 +64,6 @@ class _PlanTabState extends State<PlanTab> {
             
             _buildNewJourneyButton(context),
             
-            const SizedBox(height: 32),
-            _buildHubCard(
-              context, 
-              Icons.alt_route, 
-              'Itinerary Maker', 
-              'Map out your daily activities', 
-              () => Navigator.pushNamed(context, AppRoutes.itinerary)
-            ),
-            const SizedBox(height: 16),
-            _buildHubCard(
-              context, 
-              Icons.account_balance_wallet_outlined, 
-              'Budgeter', 
-              'Track expenses and savings', 
-              () => Navigator.pushNamed(context, AppRoutes.budgeter)
-            ),
-            
             const SizedBox(height: 48),
             Row(
               children: [
@@ -121,49 +104,8 @@ class _PlanTabState extends State<PlanTab> {
     );
   }
 
-  Widget _buildHubCard(BuildContext context, IconData icon, String title, String subtitle, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFF1F5F9)),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: const Color(0xFF1E40AF), size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: Color(0xFFCBD5E1)),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTripCard(BuildContext context, TripModel trip) {
-    String dateRange = "Dates TBD";
-    // Check trip.startDate and trip.endDate exist
-    dateRange = "${DateFormat('MMM d').format(trip.startDate)} — ${DateFormat('MMM d, y').format(trip.endDate)}";
+    String dateRange = "${DateFormat('MMM d').format(trip.startDate)} — ${DateFormat('MMM d, y').format(trip.endDate)}";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../providers/trip_provider.dart';
+import '../../models/trip_model.dart';
 
 class ActivityFormScreen extends StatefulWidget {
   final Map<String, dynamic>? initialData;
@@ -20,11 +23,12 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
   @override
   void initState() {
     super.initState();
-    _isEdit = widget.initialData != null;
-    _nameController = TextEditingController(text: _isEdit ? widget.initialData!['name'] : 'Alpine Sunrise Photography');
-    _timeController = TextEditingController(text: _isEdit ? widget.initialData!['time'] : '05:30 AM');
-    _locationController = TextEditingController(text: _isEdit ? widget.initialData!['location'] : 'Gornergrat Observatory');
-    _notesController = TextEditingController(text: _isEdit ? widget.initialData!['notes'] : "Don't forget the wide-angle lens and the tripod. The first light hits the peak at approx 5:45 AM. Pack the thermos with coffee.");
+    final activity = widget.initialData?['activity'] as ItineraryActivity?;
+    _isEdit = activity != null;
+    _nameController = TextEditingController(text: activity?.title ?? '');
+    _timeController = TextEditingController(text: activity?.time ?? '');
+    _locationController = TextEditingController(text: activity?.location ?? '');
+    _notesController = TextEditingController(text: '');
   }
 
   @override
@@ -54,7 +58,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
             child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
           ),
         ),
-        title: Text(_isEdit ? 'Edit Activity' : 'Add Activity', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+        title: Text(_isEdit ? 'Edit Activity' : 'Add Activity', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF132F5C))),
         titleSpacing: 0,
         centerTitle: false,
         actions: const [
@@ -77,11 +81,11 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
           children: [
             Text('NEW ENTRY', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
             const SizedBox(height: 8),
-            Text(_isEdit ? 'Edit Activity' : 'Add Activity', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            Text(_isEdit ? 'Edit Activity' : 'Add Activity', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
             const SizedBox(height: 12),
             Text(
               'Log a new waypoint for your journey. Details are automatically synced across your travel group\'s itinerary.',
-              style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary, height: 1.5),
+              style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B), height: 1.5),
             ),
             
             const SizedBox(height: 40),
@@ -148,6 +152,42 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
     );
   }
 
+  Future<void> _handleSave() async {
+    final title = _nameController.text;
+    final time = _timeController.text;
+    final location = _locationController.text;
+    final tripId = widget.initialData?['tripId'] as String?;
+
+    if (title.isEmpty || time.isEmpty || tripId == null) return;
+
+    final tp = context.read<TripProvider>();
+    final trip = tp.trips.firstWhere((t) => t.id == tripId);
+    
+    List<ItineraryActivity> updatedItinerary = List.from(trip.itinerary);
+    if (_isEdit) {
+      final oldAct = widget.initialData!['activity'] as ItineraryActivity;
+      final index = updatedItinerary.indexWhere((a) => a.title == oldAct.title);
+      if (index != -1) {
+        updatedItinerary[index] = ItineraryActivity(
+          title: title,
+          time: time,
+          location: location,
+          checked: oldAct.checked,
+        );
+      }
+    } else {
+      updatedItinerary.add(ItineraryActivity(
+        title: title,
+        time: time,
+        location: location,
+      ));
+    }
+
+    final updatedTrip = trip.copyWith(itinerary: updatedItinerary);
+    await tp.updateTrip(tripId, updatedTrip);
+    if (mounted) Navigator.pop(context);
+  }
+
   Widget _buildAddButtons() {
     return Column(
       children: [
@@ -155,7 +195,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
           width: double.infinity,
           height: 60,
           child: ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: _handleSave,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1E2E46),
               elevation: 0,
@@ -180,7 +220,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
           width: double.infinity,
           height: 60,
           child: ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context),
+            onPressed: _handleSave,
             icon: const Icon(Icons.check_circle_outline, color: Colors.white),
             label: Text('Save Activity', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
             style: ElevatedButton.styleFrom(
@@ -195,7 +235,16 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
           width: double.infinity,
           height: 60,
           child: ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () async {
+              final tp = context.read<TripProvider>();
+              final tripId = widget.initialData!['tripId'];
+              final oldAct = widget.initialData!['activity'] as ItineraryActivity;
+              final trip = tp.trips.firstWhere((t) => t.id == tripId);
+              final updatedItinerary = trip.itinerary.where((a) => a.title != oldAct.title).toList();
+              final updatedTrip = trip.copyWith(itinerary: updatedItinerary);
+              await tp.updateTrip(tripId, updatedTrip);
+              if (mounted) Navigator.pop(context);
+            },
             icon: const Icon(Icons.delete_outline, color: Color(0xFF7C2D12)),
             label: Text('Delete Activity', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF7C2D12))),
             style: ElevatedButton.styleFrom(
@@ -228,7 +277,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                 Text('GROUP VISIBILITY', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF1E2E46), letterSpacing: 1.0)),
                 const SizedBox(height: 8),
                 Text('This activity will be visible to all members of the Alpine Expedition 2024 trip. Changes are logged in the activity feed.', 
-                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary, height: 1.5)),
+                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B), height: 1.5)),
               ],
             ),
           ),
