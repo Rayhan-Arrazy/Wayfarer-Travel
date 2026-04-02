@@ -63,66 +63,46 @@ router.get('/reverse', async (req, res) => {
 // @desc    Get nearby POIs using Overpass API
 router.get('/nearby', async (req, res) => {
   try {
-    const { lat, lng, type, radius } = req.query;
-    const rad = parseInt(radius) || 2000;
-    const requestedTypes = (type || 'all').split(',');
+    const lat = parseFloat(req.query.lat);
+    const lng = parseFloat(req.query.lng);
+    const rad = parseInt(req.query.radius) || 100;
+    const type = req.query.type || 'all';
     
-    const categoryFilters = {
-      emergency: `
-        nwr["amenity"~"hospital|pharmacy|clinic|doctors|dentist|veterinary|social_facility"](around:${rad},${lat},${lng});
-      `,
-      financial: `
-        nwr["amenity"~"atm|bank|bureau_de_change|money_transfer|payment_terminal"](around:${rad},${lat},${lng});
-      `,
-      restaurant: `
-        nwr["amenity"~"restaurant|cafe|fast_food|bar|pub|ice_cream|food_court|biergarten"](around:${rad},${lat},${lng});
-      `,
-      station: `
-        nwr["railway"~"station|halt|tram_stop"](around:${rad},${lat},${lng});
-        nwr["amenity"~"bus_station|taxi|ferry_terminal|bus_stop"](around:${rad},${lat},${lng});
-        nwr["public_transport"~"station|stop_area"](around:${rad},${lat},${lng});
-      `,
-      tourism: `
-        nwr["tourism"~"attraction|museum|viewpoint|artwork|zoo|theme_park|gallery|information"](around:${rad},${lat},${lng});
-        nwr["historic"~"monument|memorial|statue|castle|ruins"](around:${rad},${lat},${lng});
-      `,
-      hotel: `
-        nwr["tourism"~"hotel|hostel|guest_house|motel|camp_site|apartment"](around:${rad},${lat},${lng});
-      `,
-      shopping: `
-        nwr["shop"~"mall|supermarket|convenience|clothes|electronics|department_store|bakery|beauty|gift|jewelry|outdoor|sports"](around:${rad},${lat},${lng});
-        nwr["amenity"="marketplace"](around:${rad},${lat},${lng});
-      `,
-      services: `
-        nwr["amenity"~"post_office|laundry|police|library|townhall|embassy|post_box|car_rental|car_wash|parking"](around:${rad},${lat},${lng});
-      `
-    };
+    if (isNaN(lat) || isNaN(lng)) {
+      return res.status(400).json({ message: 'Invalid coordinates provided' });
+    }
 
     let overpassFilter = '';
     
-    if (requestedTypes.includes('all')) {
-      overpassFilter = Object.values(categoryFilters).join('\n');
+    if (type === 'all' || type.includes('all')) {
+      // Find EVERYTHING with major traveler tags in the small radius
+      overpassFilter = `
+        nwr["amenity"](around:${rad},${lat},${lng});
+        nwr["tourism"](around:${rad},${lat},${lng});
+        nwr["shop"](around:${rad},${lat},${lng});
+        nwr["historic"](around:${rad},${lat},${lng});
+        nwr["leisure"](around:${rad},${lat},${lng});
+        nwr["railway"~"station|halt"](around:${rad},${lat},${lng});
+      `;
     } else {
+      const requestedTypes = type.split(',');
       requestedTypes.forEach(t => {
-        if (categoryFilters[t]) {
-          overpassFilter += categoryFilters[t];
-        } else {
-          overpassFilter += `
-            nwr["amenity"="${t}"](around:${rad},${lat},${lng});
-            nwr["tourism"="${t}"](around:${rad},${lat},${lng});
-            nwr["shop"="${t}"](around:${rad},${lat},${lng});
-            nwr["historic"="${t}"](around:${rad},${lat},${lng});
-          `;
-        }
+        overpassFilter += `
+          nwr["amenity"="${t}"](around:${rad},${lat},${lng});
+          nwr["tourism"="${t}"](around:${rad},${lat},${lng});
+          nwr["shop"="${t}"](around:${rad},${lat},${lng});
+          nwr["historic"="${t}"](around:${rad},${lat},${lng});
+          nwr["leisure"="${t}"](around:${rad},${lat},${lng});
+        `;
       });
     }
 
     const overpassQuery = `
-      [out:json][timeout:30];
+      [out:json][timeout:25];
       (
         ${overpassFilter}
       );
-      out center body 150;
+      out center body 300;
     `;
 
     const data = await axiosGet(`https://overpass-api.de/api/interpreter`, {
@@ -142,18 +122,36 @@ router.get('/route', async (req, res) => {
     const { startLat, startLng, endLat, endLng, profile } = req.query;
     const routeProfile = profile || 'driving-car';
     
-    const data = await callWithFallback(
-      () => axiosGet(`https://api.openrouteservice.org/v2/directions/${routeProfile}`, {
-        params: { start: `${startLng},${startLat}`, end: `${endLng},${endLat}` },
-        headers: { 'Authorization': process.env.OPENROUTESERVICE_API_KEY }
-      }),
-      () => axiosGet(`https://router.project-osrm.org/route/v1/${routeProfile === 'driving-car' ? 'driving' : 'foot'}/${startLng},${startLat};${endLng},${endLat}`, {
-        params: { overview: 'full', geometries: 'geojson', steps: true }
-      }),
-      'Routing'
-    );
-    
-    res.json(data);
+    try {
+      const data = await callWithFallback(
+        () => axiosGet(`https://api.openrouteservice.org/v2/directions/${routeProfile}`, {
+          params: { start: `${startLng},${startLat}`, end: `${endLng},${endLat}` },
+          headers: { 'Authorization': process.env.OPENROUTESERVICE_API_KEY }
+        }),
+        () => axiosGet(`https://router.project-osrm.org/route/v1/${routeProfile === 'driving-car' ? 'driving' : 'foot'}/${startLng},${startLat};${endLng},${endLat}`, {
+          params: { overview: 'full', geometries: 'geojson', steps: true }
+        }),
+        'Routing'
+      );
+      
+      // Normalize response
+      let geojson;
+      if (data.features && data.features.length > 0) {
+        // ORS format
+        geojson = data.features[0].geometry;
+      } else if (data.routes && data.routes.length > 0) {
+        // OSRM format
+        geojson = data.routes[0].geometry;
+      }
+      
+      if (geojson) {
+        res.json({ geometry: geojson });
+      } else {
+        res.status(404).json({ message: 'No route found' });
+      }
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

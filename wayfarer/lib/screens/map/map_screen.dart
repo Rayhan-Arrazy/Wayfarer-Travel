@@ -22,10 +22,10 @@ class _MapScreenState extends State<MapScreen> {
   List<Marker> _markers = [];
   List<LatLng> _routePoints = [];
   List<String> _selectedTypes = ['all'];
-  int _selectedRadius = 2000;
+  int _selectedRadius = 1000;
   bool _isLoading = false;
   Map<String, dynamic>? _selectedPlace;
-  String _currentLocationName = 'Discovering location...';
+  bool _didInitArgs = false;
 
   final List<Map<String, dynamic>> _categories = [
     {'icon': Icons.stars, 'label': 'All', 'type': 'all'},
@@ -45,6 +45,39 @@ class _MapScreenState extends State<MapScreen> {
     _initLocation();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didInitArgs) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        if (args.containsKey('lat') && args.containsKey('lng')) {
+           final destLat = args['lat'] as double;
+           final destLng = args['lng'] as double;
+           final destName = args['name'] as String? ?? 'Target Location';
+           final destIcon = args['icon'] as IconData? ?? Icons.place;
+           
+           setState(() {
+             _selectedPlace = {
+               'name': destName,
+               'type': 'DIRECTED ROUTE',
+               'lat': destLat,
+               'lng': destLng,
+               'distance': 'Calculating...',
+               'hours': '',
+               'icon': destIcon,
+             };
+           });
+           
+           Future.delayed(const Duration(milliseconds: 500), () {
+             _getRouteToPlace(destLat, destLng);
+           });
+        }
+      }
+      _didInitArgs = true;
+    }
+  }
+
   Future<void> _initLocation() async {
     setState(() => _isLoading = true);
     try {
@@ -58,32 +91,13 @@ class _MapScreenState extends State<MapScreen> {
         _currentLocation = LatLng(position.latitude, position.longitude);
       });
       _mapController.move(_currentLocation, _zoom);
-      await _reverseGeocode(_currentLocation);
       await _fetchNearbyPlaces();
     } catch (e) {
       debugPrint('Location Error: $e');
-      await _reverseGeocode(_currentLocation);
       await _fetchNearbyPlaces();
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  Future<void> _reverseGeocode(LatLng point) async {
-    try {
-      final response = await _api.reverseGeocode(point.latitude, point.longitude);
-      if (response.data != null) {
-        final address = response.data['address'];
-        if (address != null) {
-          setState(() {
-            _currentLocationName = address['city'] ?? 
-                                 address['town'] ?? 
-                                 address['suburb'] ?? 
-                                 address['road'] ?? 'Current Area';
-          });
-        }
-      }
-    } catch (_) {}
   }
 
   Future<void> _fetchNearbyPlaces() async {
@@ -97,14 +111,13 @@ class _MapScreenState extends State<MapScreen> {
       );
       
       final List<dynamic> elements = response.data['elements'] ?? [];
-      debugPrint('Found ${elements.length} places');
       
       setState(() {
         _markers = elements.map((e) {
           final lat = (e['lat'] ?? e['center']?['lat'])?.toDouble() ?? 0.0;
           final lon = (e['lon'] ?? e['center']?['lon'])?.toDouble() ?? 0.0;
           final tags = e['tags'] ?? {};
-          final name = tags['name'] ?? tags['amenity'] ?? tags['tourism'] ?? tags['shop'] ?? tags['historic'] ?? 'Point of Interest';
+          final name = tags['name'] ?? tags['amenity'] ?? tags['tourism'] ?? tags['shop'] ?? 'Point of Interest';
           final typeLabel = _getTypeLabel(tags);
           final icon = _getIconForTags(tags);
           
@@ -122,7 +135,6 @@ class _MapScreenState extends State<MapScreen> {
     if (tags['amenity'] != null) return (tags['amenity'] as String).toUpperCase();
     if (tags['tourism'] != null) return (tags['tourism'] as String).toUpperCase();
     if (tags['shop'] != null) return (tags['shop'] as String).toUpperCase();
-    if (tags['historic'] != null) return (tags['historic'] as String).toUpperCase();
     if (tags['railway'] != null) return 'STATION';
     return 'PLACE';
   }
@@ -134,7 +146,7 @@ class _MapScreenState extends State<MapScreen> {
     if (tags['tourism'] == 'hotel' || tags['tourism'] == 'hostel' || tags['tourism'] == 'guest_house') return Icons.hotel;
     if (tags['amenity'] == 'hospital' || tags['amenity'] == 'pharmacy' || tags['amenity'] == 'clinic') return Icons.medical_services;
     if (tags['shop'] != null) return Icons.shopping_bag;
-    if (tags['tourism'] != null || tags['historic'] != null) return Icons.camera_alt;
+    if (tags['tourism'] != null) return Icons.camera_alt;
     return Icons.place;
   }
 
@@ -142,14 +154,23 @@ class _MapScreenState extends State<MapScreen> {
     setState(() => _isLoading = true);
     try {
       final response = await _api.getRoute(_currentLocation.latitude, _currentLocation.longitude, endLat, endLng);
-      if (response.data != null) {
-        final List<dynamic> coordinates = response.data['features'][0]['geometry']['coordinates'];
+      // Normalized backend returns { geometry: { coordinates: [...] } } or { geometry: { type: ..., coordinates: [...] } }
+      if (response.data != null && response.data['geometry'] != null) {
+        final Map<String, dynamic> geometry = response.data['geometry'];
+        final List<dynamic> coordinates = geometry['coordinates'];
+        
         setState(() {
           _routePoints = coordinates.map((c) => LatLng(c[1].toDouble(), c[0].toDouble())).toList();
+          if (_selectedPlace != null && _selectedPlace!['distance'] == 'Calculating...') {
+             final distance = Geolocator.distanceBetween(_currentLocation.latitude, _currentLocation.longitude, endLat, endLng);
+             _selectedPlace!['distance'] = distance < 1000 ? '${distance.round()}m' : '${(distance/1000).toStringAsFixed(1)}km';
+          }
         });
         
         final bounds = LatLngBounds.fromPoints(_routePoints);
-        _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(100)));
+        _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)));
+      } else {
+         throw Exception('Invalid route geometry');
       }
     } catch (e) {
       debugPrint('Routing Error: $e');
@@ -187,10 +208,9 @@ class _MapScreenState extends State<MapScreen> {
         });
         
         _mapController.move(newPoint, 15.0);
-        await _reverseGeocode(newPoint);
         await _fetchNearbyPlaces();
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No places found matching your search.')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No places found.')));
       }
     } catch (e) {
       debugPrint('Search Error: $e');
@@ -213,7 +233,7 @@ class _MapScreenState extends State<MapScreen> {
     }
     _selectedPlace = null;
     _routePoints = [];
-    setState(() {}); // Explicitly call setState on the parent
+    // setState() in parent will be triggered if this is called within a setState context or explicitly
   }
 
   Marker _buildCustomMarker(double lat, double lng, String label, IconData icon, String name, Map tags) {
@@ -221,6 +241,7 @@ class _MapScreenState extends State<MapScreen> {
       point: LatLng(lat, lng),
       width: 120,
       height: 90,
+      rotate: true, // Optimizing performance
       child: GestureDetector(
         onTap: () {
           setState(() {
@@ -249,9 +270,9 @@ class _MapScreenState extends State<MapScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, color: Colors.white, size: 12),
-                  const SizedBox(width: 4),
-                  Flexible(child: Text(label, style: GoogleFonts.inter(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+                   Icon(icon, color: Colors.white, size: 12),
+                   const SizedBox(width: 4),
+                   Flexible(child: Text(label, style: GoogleFonts.inter(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
                 ],
               ),
             ),
@@ -278,6 +299,7 @@ class _MapScreenState extends State<MapScreen> {
             options: MapOptions(
               initialCenter: _currentLocation,
               initialZoom: _zoom,
+              interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
               onTap: (_, __) => setState(() {
                 _selectedPlace = null;
                 _routePoints = [];
@@ -288,6 +310,7 @@ class _MapScreenState extends State<MapScreen> {
                 urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.wayfarer.app',
+                tileDisplay: const TileDisplay.fadeIn(duration: Duration(milliseconds: 300)),
               ),
               if (_routePoints.isNotEmpty)
                 PolylineLayer(
@@ -299,7 +322,7 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ],
                 ),
-              MarkerLayer(markers: _markers),
+              MarkerLayer(markers: _markers, alignment: Alignment.topCenter),
               MarkerLayer(markers: [
                 Marker(
                   point: _currentLocation,
@@ -331,7 +354,7 @@ class _MapScreenState extends State<MapScreen> {
                     children: [
                       const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1E2E46))),
                       const SizedBox(width: 12),
-                      Text('Updating Map...', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+                      Text('Working...', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
                     ],
                   ),
                 ),
@@ -346,13 +369,8 @@ class _MapScreenState extends State<MapScreen> {
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
-                      height: 56,
-                      width: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, 4))],
-                      ),
+                      height: 56, width: 56,
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, 4))]),
                       child: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF1E2E46), size: 18),
                     ),
                   ),
@@ -361,11 +379,7 @@ class _MapScreenState extends State<MapScreen> {
                     child: Container(
                       height: 56,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, 4))],
-                      ),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, 4))]),
                       child: Row(
                         children: [
                           const Icon(Icons.search, color: Color(0xFF94A3B8), size: 20),
@@ -375,23 +389,11 @@ class _MapScreenState extends State<MapScreen> {
                               controller: _searchController,
                               onSubmitted: _performSearch,
                               style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: const Color(0xFF1E2E46)),
-                              decoration: const InputDecoration(
-                                hintText: 'Search near you...',
-                                hintStyle: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
-                                border: InputBorder.none,
-                              ),
+                              decoration: const InputDecoration(hintText: 'Search near you...', hintStyle: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)), border: InputBorder.none),
                             ),
                           ),
-                          Container(
-                            height: 24,
-                            width: 1,
-                            color: const Color(0xFFE2E8F0),
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.tune_rounded, color: Color(0xFF1E2E46), size: 22),
-                            onPressed: _showFilters,
-                          ),
+                          Container(height: 24, width: 1, color: const Color(0xFFE2E8F0), margin: const EdgeInsets.symmetric(horizontal: 8)),
+                          IconButton(icon: const Icon(Icons.tune_rounded, color: Color(0xFF1E2E46), size: 22), onPressed: _showFilters),
                         ],
                       ),
                     ),
@@ -402,72 +404,42 @@ class _MapScreenState extends State<MapScreen> {
           ),
 
           Positioned(
-            bottom: 24,
-            left: 20,
-            right: 20,
+            bottom: 24, left: 20, right: 20,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 FloatingActionButton(
-                  mini: true,
-                  heroTag: 'location_btn',
+                  mini: true, heroTag: 'location_btn',
                   backgroundColor: Colors.white,
                   onPressed: _initLocation,
                   child: const Icon(Icons.my_location, color: Color(0xFF1E2E46)),
                 ),
                 const SizedBox(height: 16),
-                
                 if (_selectedPlace != null)
                   Container(
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))],
-                    ),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))]),
                     child: Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE0E7FF),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(_selectedPlace!['icon'], color: const Color(0xFF1E2E46)),
-                        ),
+                        Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFE0E7FF), borderRadius: BorderRadius.circular(12)), child: Icon(_selectedPlace!['icon'], color: const Color(0xFF1E2E46))),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(_selectedPlace!['type'], style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1)),
                               const SizedBox(height: 4),
                               Text(_selectedPlace!['name'], style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46)), overflow: TextOverflow.ellipsis),
                               const SizedBox(height: 2),
-                              Text('${_selectedPlace!['distance']} • ${_selectedPlace!['hours']}', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B))),
+                              Text(_selectedPlace!['distance'] == 'Calculating...' ? 'Calculating path...' : '${_selectedPlace!['distance']} • ${_selectedPlace!['hours']}', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B))),
                             ],
                           ),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
-                          onPressed: () {
-                            _getRouteToPlace(_selectedPlace!['lat'], _selectedPlace!['lng']);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E2E46),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 0,
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.directions_rounded, size: 18),
-                              const SizedBox(width: 4),
-                              Text('Route', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                            ],
-                          ),
+                          onPressed: () { _getRouteToPlace(_selectedPlace!['lat'], _selectedPlace!['lng']); },
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E2E46), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
+                          child: const Row(children: [Icon(Icons.directions_rounded, size: 18), SizedBox(width: 4), Text('Route', style: TextStyle(fontWeight: FontWeight.bold))]),
                         ),
                       ],
                     ),
@@ -487,17 +459,10 @@ class _MapScreenState extends State<MapScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Container(
-          padding: EdgeInsets.only(
-            left: 24, right: 24, top: 24,
-            bottom: MediaQuery.of(context).padding.bottom + 24,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-          ),
+          padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(context).padding.bottom + 24),
+          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
               const SizedBox(height: 24),
@@ -505,53 +470,20 @@ class _MapScreenState extends State<MapScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Categories', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
-                  TextButton(
-                    onPressed: () {
-                      setModalState(() {
-                        _selectedTypes = ['all'];
-                      });
-                      setState(() {});
-                    },
-                    child: Text('Reset', style: GoogleFonts.inter(color: const Color(0xFF3B82F6), fontWeight: FontWeight.bold)),
-                  ),
+                  TextButton(onPressed: () { setModalState(() { _selectedTypes = ['all']; }); setState(() {}); }, child: Text('Reset', style: GoogleFonts.inter(color: const Color(0xFF3B82F6), fontWeight: FontWeight.bold))),
                 ],
               ),
               const SizedBox(height: 16),
               Wrap(
-                spacing: 8,
-                runSpacing: 10,
+                spacing: 8, runSpacing: 10,
                 children: _categories.map((cat) {
                   bool isSelected = _selectedTypes.contains(cat['type']);
                   return GestureDetector(
-                    onTap: () {
-                      setModalState(() {
-                        _onSettingsUpdated(cat['type']);
-                      });
-                    },
+                    onTap: () { setModalState(() { _onSettingsUpdated(cat['type']); }); setState(() {}); },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isSelected ? const Color(0xFF1E2E46) : Colors.transparent,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(cat['icon'], size: 16, color: isSelected ? Colors.white : const Color(0xFF64748B)),
-                          const SizedBox(width: 8),
-                          Text(
-                            cat['label'],
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                              color: isSelected ? Colors.white : const Color(0xFF475569),
-                            ),
-                          ),
-                        ],
-                      ),
+                      decoration: BoxDecoration(color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(14), border: Border.all(color: isSelected ? const Color(0xFF1E2E46) : Colors.transparent)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(cat['icon'], size: 16, color: isSelected ? Colors.white : const Color(0xFF64748B)), const SizedBox(width: 8), Text(cat['label'], style: GoogleFonts.inter(fontSize: 13, fontWeight: isSelected ? FontWeight.bold : FontWeight.w600, color: isSelected ? Colors.white : const Color(0xFF475569)))]),
                     ),
                   );
                 }).toList(),
@@ -568,27 +500,11 @@ class _MapScreenState extends State<MapScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(right: 12.0),
                       child: GestureDetector(
-                        onTap: () {
-                          setModalState(() {
-                            _selectedRadius = radius;
-                          });
-                          setState(() {});
-                        },
+                        onTap: () { setModalState(() { _selectedRadius = radius; }); setState(() {}); },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFE2E8F0)),
-                          ),
-                          child: Text(
-                            label,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              color: isSelected ? Colors.white : const Color(0xFF475569),
-                            ),
-                          ),
+                          decoration: BoxDecoration(color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12), border: Border.all(color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFE2E8F0))),
+                          child: Text(label, style: GoogleFonts.inter(fontSize: 14, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? Colors.white : const Color(0xFF475569))),
                         ),
                       ),
                     );
@@ -599,17 +515,8 @@ class _MapScreenState extends State<MapScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _fetchNearbyPlaces();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E2E46),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
-                  ),
+                  onPressed: () { Navigator.pop(context); _fetchNearbyPlaces(); },
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E2E46), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
                   child: Text('Apply Filters', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
