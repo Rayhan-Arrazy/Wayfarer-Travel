@@ -45,12 +45,12 @@ class GuideTab extends StatelessWidget {
               style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B), height: 1.5)),
             const SizedBox(height: 32),
             
-            _buildContinentCard(context, 'Asia', 'Explore Culture & Tips — A tapestry of ancient traditions meeting hyper-modern cities across the world\'s largest landmass.', 'https://images.unsplash.com/photo-1535139262974-676e3c05ee63?w=800&q=80'),
-            _buildContinentCard(context, 'Europe', 'Explore Culture & Tips — From the Mediterranean coast to Alpine peaks and historic capitals.', 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800&q=80'),
-            _buildContinentCard(context, 'Africa', 'Explore Culture & Tips — Unmatched wildlife, vast deserts, and vibrant urban centers rich in rhythm.', 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800&q=80'),
-            _buildContinentCard(context, 'America', 'Explore Culture & Tips — A journey from the Arctic tundra to the tropical rainforests of the south.', 'https://images.unsplash.com/photo-1475503572774-15a45e5d60b9?w=800&q=80'),
-            _buildContinentCard(context, 'Oceania & Australia', 'Explore Culture & Tips — Island paradises and the rugged, red soul of the Outback.', 'https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=800&q=80'),
-            _buildContinentCard(context, 'Antarctica', 'Explore Culture & Tips — The last great wilderness. A silent, majestic expanse of ice and unique resilience.', 'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=800&q=80', isLast: true),
+            _buildContinentCard(context, 'Asia', 'Explore Culture & Tips — A tapestry of ancient traditions meeting hyper-modern cities across the world\'s largest landmass.', 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80'),
+            _buildContinentCard(context, 'Europe', 'Explore Culture & Tips — From the Mediterranean coast to Alpine peaks and historic capitals.', 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=1200&q=80'),
+            _buildContinentCard(context, 'Africa', 'Explore Culture & Tips — Unmatched wildlife, vast deserts, and vibrant urban centers rich in rhythm.', 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?auto=format&fit=crop&w=1200&q=80'),
+            _buildContinentCard(context, 'America', 'Explore Culture & Tips — A journey from the Arctic tundra to the tropical rainforests of the south.', 'https://images.unsplash.com/photo-1475503572774-15a45e5d60b9?auto=format&fit=crop&w=1200&q=80'),
+            _buildContinentCard(context, 'Oceania & Australia', 'Explore Culture & Tips — Island paradises and the rugged, red soul of the Outback.', 'https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?auto=format&fit=crop&w=1200&q=80'),
+            _buildContinentCard(context, 'Antarctica', 'Explore Culture & Tips — The last great wilderness. A silent, majestic expanse of ice and unique resilience.', 'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?auto=format&fit=crop&w=1200&q=80', isLast: true),
 
             const SizedBox(height: 100),
           ],
@@ -67,6 +67,7 @@ class GuideTab extends StatelessWidget {
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 24),
         decoration: BoxDecoration(
+          color: const Color(0xFF1E2E46), // Premium dark blue fallback
           borderRadius: BorderRadius.circular(20),
           image: DecorationImage(
             image: NetworkImage(imageUrl),
