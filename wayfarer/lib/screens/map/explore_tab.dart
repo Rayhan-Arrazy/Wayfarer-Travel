@@ -51,9 +51,8 @@ class _ExploreTabState extends State<ExploreTab> {
         _isLoading = true; // Trigger loader while fetching API
       });
 
-      // Increased internal radius to 2KM to ensure list is NEVER empty
-      // User expects to see the locations from their map screen
-      final response = await _api.getNearbyPlaces(pos.latitude, pos.longitude, 'all', radius: 2000);
+      // Fetch within strictly 500M as requested
+      final response = await _api.getNearbyPlaces(pos.latitude, pos.longitude, 'all', radius: 500);
       final List<dynamic> elements = response.data['elements'] ?? [];
       
       Map<String, List<Map<String, dynamic>>> newCategorizedItems = {
@@ -69,6 +68,11 @@ class _ExploreTabState extends State<ExploreTab> {
 
       for (var e in elements) {
         final tags = e['tags'] ?? {};
+        
+        // FILTER: Only show places with a proper name/brand to avoid generic dots
+        final name = tags['name'] ?? tags['brand'] ?? tags['operator'];
+        if (name == null) continue;
+
         final lat = (e['lat'] ?? e['center']?['lat'])?.toDouble() ?? 0.0;
         final lon = (e['lon'] ?? e['center']?['lon'])?.toDouble() ?? 0.0;
         if (lat == 0.0) continue;
@@ -77,7 +81,7 @@ class _ExploreTabState extends State<ExploreTab> {
         
         final item = {
           'icon': _getIconForTags(tags),
-          'title': tags['name'] ?? tags['brand'] ?? tags['operator'] ?? _getFallbackName(tags),
+          'title': name,
           'subtitle': _getSubtitle(tags),
           'badge': _getBadge(tags),
           'distance': distance,
@@ -112,9 +116,10 @@ class _ExploreTabState extends State<ExploreTab> {
         }
       }
 
-      // Sort every category by distance so the nearest 100M items appear first
+      // Sort every category by distance and limit to 5 per category
       newCategorizedItems.forEach((key, list) {
         list.sort((a, b) => (a['distance'] as double).compareTo(b['distance'] as double));
+        newCategorizedItems[key] = list.take(5).toList();
       });
 
       // Clear empty categories
@@ -129,13 +134,6 @@ class _ExploreTabState extends State<ExploreTab> {
       debugPrint('ExploreTab Load Error: $e');
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  String _getFallbackName(Map tags) {
-    if (tags['amenity'] != null) return (tags['amenity'] as String).replaceAll('_', ' ').toUpperCase();
-    if (tags['shop'] != null) return (tags['shop'] as String).replaceAll('_', ' ').toUpperCase();
-    if (tags['tourism'] != null) return (tags['tourism'] as String).replaceAll('_', ' ').toUpperCase();
-    return 'LOCATION NEAR YOU';
   }
 
   String _getSubtitle(Map tags) {
@@ -250,7 +248,7 @@ class _ExploreTabState extends State<ExploreTab> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('SMART RADIUS ACTIVE', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w900, color: const Color(0xFFEF4444), letterSpacing: 1.0)),
+                      Text('500M RADIUS ACTIVE', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w900, color: const Color(0xFFEF4444), letterSpacing: 1.0)),
                       Text(
                         _currentPosition != null 
                         ? '${_currentPosition!.latitude.toStringAsFixed(4)} N, ${_currentPosition!.longitude.toStringAsFixed(4)} E'
