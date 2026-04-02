@@ -20,8 +20,8 @@ class _MapScreenState extends State<MapScreen> {
   LatLng _currentLocation = const LatLng(-6.2000, 106.8166); // Default Jakarta context
   double _zoom = 15.0;
   List<Marker> _markers = [];
-  String _selectedCategory = 'All';
-  String _selectedType = 'all';
+  List<LatLng> _routePoints = [];
+  List<String> _selectedTypes = ['all'];
   int _selectedRadius = 2000;
   bool _isLoading = false;
   Map<String, dynamic>? _selectedPlace;
@@ -34,8 +34,9 @@ class _MapScreenState extends State<MapScreen> {
     {'icon': Icons.restaurant, 'label': 'Dining', 'type': 'restaurant'},
     {'icon': Icons.train, 'label': 'Transport', 'type': 'station'},
     {'icon': Icons.hotel, 'label': 'Hotels', 'type': 'hotel'},
-    {'icon': Icons.camera_alt, 'label': 'Attractions', 'type': 'tourism'},
-    {'icon': Icons.shopping_bag, 'label': 'Shopping', 'type': 'mall'},
+    {'icon': Icons.camera_alt, 'label': 'Tourism', 'type': 'tourism'},
+    {'icon': Icons.shopping_bag, 'label': 'Shopping', 'type': 'shopping'},
+    {'icon': Icons.miscellaneous_services, 'label': 'Services', 'type': 'services'},
   ];
 
   @override
@@ -91,23 +92,24 @@ class _MapScreenState extends State<MapScreen> {
       final response = await _api.getNearbyPlaces(
         _currentLocation.latitude, 
         _currentLocation.longitude, 
-        _selectedType,
+        _selectedTypes.join(','),
         radius: _selectedRadius,
       );
       
       final List<dynamic> elements = response.data['elements'] ?? [];
+      debugPrint('Found ${elements.length} places');
       
       setState(() {
         _markers = elements.map((e) {
-          final lat = (e['lat'] ?? e['center']?['lat']).toDouble();
-          final lon = (e['lon'] ?? e['center']?['lon']).toDouble();
+          final lat = (e['lat'] ?? e['center']?['lat'])?.toDouble() ?? 0.0;
+          final lon = (e['lon'] ?? e['center']?['lon'])?.toDouble() ?? 0.0;
           final tags = e['tags'] ?? {};
-          final name = tags['name'] ?? tags['amenity'] ?? tags['tourism'] ?? 'Point of Interest';
+          final name = tags['name'] ?? tags['amenity'] ?? tags['tourism'] ?? tags['shop'] ?? tags['historic'] ?? 'Point of Interest';
           final typeLabel = _getTypeLabel(tags);
           final icon = _getIconForTags(tags);
           
           return _buildCustomMarker(lat, lon, typeLabel, icon, name, tags);
-        }).toList();
+        }).where((m) => m.point.latitude != 0.0).toList();
       });
     } catch (e) {
       debugPrint('Nearby Fetch Error: $e');
@@ -119,18 +121,42 @@ class _MapScreenState extends State<MapScreen> {
   String _getTypeLabel(Map tags) {
     if (tags['amenity'] != null) return (tags['amenity'] as String).toUpperCase();
     if (tags['tourism'] != null) return (tags['tourism'] as String).toUpperCase();
+    if (tags['shop'] != null) return (tags['shop'] as String).toUpperCase();
+    if (tags['historic'] != null) return (tags['historic'] as String).toUpperCase();
     if (tags['railway'] != null) return 'STATION';
     return 'PLACE';
   }
 
   IconData _getIconForTags(Map tags) {
-    if (tags['amenity'] == 'restaurant' || tags['amenity'] == 'cafe') return Icons.restaurant;
-    if (tags['amenity'] == 'atm' || tags['amenity'] == 'bank') return Icons.attach_money;
-    if (tags['railway'] == 'station' || tags['amenity'] == 'bus_station') return Icons.train;
-    if (tags['tourism'] == 'hotel' || tags['tourism'] == 'hostel') return Icons.hotel;
-    if (tags['amenity'] == 'hospital' || tags['amenity'] == 'pharmacy') return Icons.medical_services;
-    if (tags['tourism'] != null) return Icons.camera_alt;
+    if (tags['amenity'] == 'restaurant' || tags['amenity'] == 'cafe' || tags['amenity'] == 'fast_food') return Icons.restaurant;
+    if (tags['amenity'] == 'atm' || tags['amenity'] == 'bank' || tags['amenity'] == 'bureau_de_change') return Icons.attach_money;
+    if (tags['railway'] == 'station' || tags['amenity'] == 'bus_station' || tags['amenity'] == 'taxi') return Icons.train;
+    if (tags['tourism'] == 'hotel' || tags['tourism'] == 'hostel' || tags['tourism'] == 'guest_house') return Icons.hotel;
+    if (tags['amenity'] == 'hospital' || tags['amenity'] == 'pharmacy' || tags['amenity'] == 'clinic') return Icons.medical_services;
+    if (tags['shop'] != null) return Icons.shopping_bag;
+    if (tags['tourism'] != null || tags['historic'] != null) return Icons.camera_alt;
     return Icons.place;
+  }
+
+  Future<void> _getRouteToPlace(double endLat, double endLng) async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _api.getRoute(_currentLocation.latitude, _currentLocation.longitude, endLat, endLng);
+      if (response.data != null) {
+        final List<dynamic> coordinates = response.data['features'][0]['geometry']['coordinates'];
+        setState(() {
+          _routePoints = coordinates.map((c) => LatLng(c[1].toDouble(), c[0].toDouble())).toList();
+        });
+        
+        final bounds = LatLngBounds.fromPoints(_routePoints);
+        _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(100)));
+      }
+    } catch (e) {
+      debugPrint('Routing Error: $e');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not calculate route.')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _performSearch(String query) async {
@@ -151,10 +177,13 @@ class _MapScreenState extends State<MapScreen> {
           _selectedPlace = {
             'name': first['display_name'].split(',').first,
             'type': 'SEARCH RESULT',
+            'lat': lat,
+            'lng': lon,
             'distance': 'Found via search',
             'hours': '',
             'icon': Icons.search,
           };
+          _routePoints = [];
         });
         
         _mapController.move(newPoint, 15.0);
@@ -170,12 +199,21 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _onSettingsUpdated(String label, String type) {
-    setState(() {
-      _selectedCategory = label;
-      _selectedType = type;
-      _selectedPlace = null;
-    });
+  void _onSettingsUpdated(String type) {
+    if (type == 'all') {
+      _selectedTypes = ['all'];
+    } else {
+      _selectedTypes.remove('all');
+      if (_selectedTypes.contains(type)) {
+        _selectedTypes.remove(type);
+        if (_selectedTypes.isEmpty) _selectedTypes = ['all'];
+      } else {
+        _selectedTypes.add(type);
+      }
+    }
+    _selectedPlace = null;
+    _routePoints = [];
+    setState(() {}); // Explicitly call setState on the parent
   }
 
   Marker _buildCustomMarker(double lat, double lng, String label, IconData icon, String name, Map tags) {
@@ -189,10 +227,13 @@ class _MapScreenState extends State<MapScreen> {
             _selectedPlace = {
               'name': name,
               'type': label,
+              'lat': lat,
+              'lng': lng,
               'distance': '${_calculateDistanceString(lat, lng)} away',
               'hours': tags['opening_hours'] ?? 'Check local hours',
               'icon': icon,
             };
+            _routePoints = []; 
           });
           _mapController.move(LatLng(lat, lng), 16.0);
         },
@@ -232,13 +273,15 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Map
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
               initialCenter: _currentLocation,
               initialZoom: _zoom,
-              onTap: (_, __) => setState(() => _selectedPlace = null),
+              onTap: (_, __) => setState(() {
+                _selectedPlace = null;
+                _routePoints = [];
+              }),
             ),
             children: [
               TileLayer(
@@ -246,9 +289,18 @@ class _MapScreenState extends State<MapScreen> {
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.wayfarer.app',
               ),
+              if (_routePoints.isNotEmpty)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: _routePoints,
+                      strokeWidth: 5,
+                      color: const Color(0xFF3B82F6),
+                    ),
+                  ],
+                ),
               MarkerLayer(markers: _markers),
               MarkerLayer(markers: [
-                // Current location marker
                 Marker(
                   point: _currentLocation,
                   width: 30,
@@ -286,7 +338,6 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
 
-          // Search Bar
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -295,7 +346,8 @@ class _MapScreenState extends State<MapScreen> {
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
-                      padding: const EdgeInsets.all(12),
+                      height: 56,
+                      width: 56,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -323,12 +375,18 @@ class _MapScreenState extends State<MapScreen> {
                               controller: _searchController,
                               onSubmitted: _performSearch,
                               style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: const Color(0xFF1E2E46)),
-                              decoration: InputDecoration(
-                                hintText: 'Near $_currentLocationName...',
-                                hintStyle: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF94A3B8)),
+                              decoration: const InputDecoration(
+                                hintText: 'Search near you...',
+                                hintStyle: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
                                 border: InputBorder.none,
                               ),
                             ),
+                          ),
+                          Container(
+                            height: 24,
+                            width: 1,
+                            color: const Color(0xFFE2E8F0),
+                            margin: const EdgeInsets.symmetric(horizontal: 8),
                           ),
                           IconButton(
                             icon: const Icon(Icons.tune_rounded, color: Color(0xFF1E2E46), size: 22),
@@ -343,7 +401,6 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          // Bottom Controls
           Positioned(
             bottom: 24,
             left: 20,
@@ -351,7 +408,6 @@ class _MapScreenState extends State<MapScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // Current Location Button
                 FloatingActionButton(
                   mini: true,
                   heroTag: 'location_btn',
@@ -361,7 +417,6 @@ class _MapScreenState extends State<MapScreen> {
                 ),
                 const SizedBox(height: 16),
                 
-                // Details Card
                 if (_selectedPlace != null)
                   Container(
                     padding: const EdgeInsets.all(20),
@@ -386,7 +441,7 @@ class _MapScreenState extends State<MapScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('NEAREST ESSENTIAL', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1)),
+                              Text(_selectedPlace!['type'], style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1)),
                               const SizedBox(height: 4),
                               Text(_selectedPlace!['name'], style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46)), overflow: TextOverflow.ellipsis),
                               const SizedBox(height: 2),
@@ -394,14 +449,25 @@ class _MapScreenState extends State<MapScreen> {
                             ],
                           ),
                         ),
+                        const SizedBox(width: 8),
                         ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            _getRouteToPlace(_selectedPlace!['lat'], _selectedPlace!['lng']);
+                          },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF475569),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            backgroundColor: const Color(0xFF1E2E46),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
                           ),
-                          child: const Text('Navigate'),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.directions_rounded, size: 18),
+                              const SizedBox(width: 4),
+                              Text('Route', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -423,7 +489,7 @@ class _MapScreenState extends State<MapScreen> {
         builder: (context, setModalState) => Container(
           padding: EdgeInsets.only(
             left: 24, right: 24, top: 24,
-            bottom: MediaQuery.of(context).padding.bottom + 32,
+            bottom: MediaQuery.of(context).padding.bottom + 24,
           ),
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -438,63 +504,96 @@ class _MapScreenState extends State<MapScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Filter Search', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context), 
-                    icon: const Icon(Icons.close, color: Color(0xFF1E2E46))
+                  Text('Categories', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+                  TextButton(
+                    onPressed: () {
+                      setModalState(() {
+                        _selectedTypes = ['all'];
+                      });
+                      setState(() {});
+                    },
+                    child: Text('Reset', style: GoogleFonts.inter(color: const Color(0xFF3B82F6), fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              Text('CATEGORY', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF94A3B8), letterSpacing: 1)),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 8,
-                runSpacing: 8,
+                runSpacing: 10,
                 children: _categories.map((cat) {
-                  bool isSelected = _selectedCategory == cat['label'];
-                  return ChoiceChip(
-                    label: Text(cat['label']),
-                    selected: isSelected,
-                    onSelected: (selected) {
+                  bool isSelected = _selectedTypes.contains(cat['type']);
+                  return GestureDetector(
+                    onTap: () {
                       setModalState(() {
-                        _onSettingsUpdated(cat['label'], cat['type']);
+                        _onSettingsUpdated(cat['type']);
                       });
                     },
-                    avatar: Icon(cat['icon'], size: 16, color: isSelected ? Colors.white : const Color(0xFF475569)),
-                    labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : const Color(0xFF475569)),
-                    selectedColor: const Color(0xFF1E2E46),
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    side: BorderSide.none,
-                    showCheckmark: false,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFF1E2E46) : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(cat['icon'], size: 16, color: isSelected ? Colors.white : const Color(0xFF64748B)),
+                          const SizedBox(width: 8),
+                          Text(
+                            cat['label'],
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                              color: isSelected ? Colors.white : const Color(0xFF475569),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 32),
-              Text('DISTANCE LIMIT', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF94A3B8), letterSpacing: 1)),
+              Text('Search Radius', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
               const SizedBox(height: 16),
-              Row(
-                children: [500, 1000, 2000, 5000].map((radius) {
-                  bool isSelected = _selectedRadius == radius;
-                  String label = radius >= 1000 ? '${(radius/1000).toInt()}km' : '${radius}m';
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ChoiceChip(
-                      label: Text(label),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setModalState(() => _selectedRadius = radius);
-                      },
-                      labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : const Color(0xFF475569)),
-                      selectedColor: const Color(0xFF1E2E46),
-                      backgroundColor: const Color(0xFFF1F5F9),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: BorderSide.none,
-                      showCheckmark: false,
-                    ),
-                  );
-                }).toList(),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [100, 500, 1000, 2000, 5000, 10000].map((radius) {
+                    bool isSelected = _selectedRadius == radius;
+                    String label = radius >= 1000 ? '${(radius/1000).toInt()}km' : '${radius}m';
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12.0),
+                      child: GestureDetector(
+                        onTap: () {
+                          setModalState(() {
+                            _selectedRadius = radius;
+                          });
+                          setState(() {});
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFE2E8F0)),
+                          ),
+                          child: Text(
+                            label,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected ? Colors.white : const Color(0xFF475569),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
               const SizedBox(height: 32),
               SizedBox(
@@ -507,11 +606,11 @@ class _MapScreenState extends State<MapScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1E2E46),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
-                  child: Text('Show Results', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: Text('Apply Filters', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

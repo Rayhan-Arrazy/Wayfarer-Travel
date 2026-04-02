@@ -64,63 +64,65 @@ router.get('/reverse', async (req, res) => {
 router.get('/nearby', async (req, res) => {
   try {
     const { lat, lng, type, radius } = req.query;
-    const rad = radius || 2000;
-    const amenityType = type || 'all';
+    const rad = parseInt(radius) || 2000;
+    const requestedTypes = (type || 'all').split(',');
     
+    const categoryFilters = {
+      emergency: `
+        nwr["amenity"~"hospital|pharmacy|clinic|doctors|dentist|veterinary|social_facility"](around:${rad},${lat},${lng});
+      `,
+      financial: `
+        nwr["amenity"~"atm|bank|bureau_de_change|money_transfer|payment_terminal"](around:${rad},${lat},${lng});
+      `,
+      restaurant: `
+        nwr["amenity"~"restaurant|cafe|fast_food|bar|pub|ice_cream|food_court|biergarten"](around:${rad},${lat},${lng});
+      `,
+      station: `
+        nwr["railway"~"station|halt|tram_stop"](around:${rad},${lat},${lng});
+        nwr["amenity"~"bus_station|taxi|ferry_terminal|bus_stop"](around:${rad},${lat},${lng});
+        nwr["public_transport"~"station|stop_area"](around:${rad},${lat},${lng});
+      `,
+      tourism: `
+        nwr["tourism"~"attraction|museum|viewpoint|artwork|zoo|theme_park|gallery|information"](around:${rad},${lat},${lng});
+        nwr["historic"~"monument|memorial|statue|castle|ruins"](around:${rad},${lat},${lng});
+      `,
+      hotel: `
+        nwr["tourism"~"hotel|hostel|guest_house|motel|camp_site|apartment"](around:${rad},${lat},${lng});
+      `,
+      shopping: `
+        nwr["shop"~"mall|supermarket|convenience|clothes|electronics|department_store|bakery|beauty|gift|jewelry|outdoor|sports"](around:${rad},${lat},${lng});
+        nwr["amenity"="marketplace"](around:${rad},${lat},${lng});
+      `,
+      services: `
+        nwr["amenity"~"post_office|laundry|police|library|townhall|embassy|post_box|car_rental|car_wash|parking"](around:${rad},${lat},${lng});
+      `
+    };
+
     let overpassFilter = '';
-    if (amenityType === 'all') {
-      overpassFilter = `
-        node["amenity"~"restaurant|cafe|fast_food|bar|atm|bank|pharmacy|hospital"](around:${rad},${lat},${lng});
-        way["amenity"~"restaurant|cafe|fast_food|bar|atm|bank|pharmacy|hospital"](around:${rad},${lat},${lng});
-        node["tourism"](around:${rad},${lat},${lng});
-        way["tourism"](around:${rad},${lat},${lng});
-        node["railway"="station"](around:${rad},${lat},${lng});
-        way["railway"="station"](around:${rad},${lat},${lng});
-      `;
-    } else if (amenityType === 'restaurant') {
-      overpassFilter = `
-        node["amenity"~"restaurant|cafe|fast_food|bar"](around:${rad},${lat},${lng});
-        way["amenity"~"restaurant|cafe|fast_food|bar"](around:${rad},${lat},${lng});
-      `;
-    } else if (amenityType === 'station') {
-      overpassFilter = `
-        node["railway"="station"](around:${rad},${lat},${lng});
-        way["railway"="station"](around:${rad},${lat},${lng});
-        node["amenity"="bus_station"](around:${rad},${lat},${lng});
-      `;
-    } else if (amenityType === 'tourism') {
-      overpassFilter = `
-        node["tourism"](around:${rad},${lat},${lng});
-        way["tourism"](around:${rad},${lat},${lng});
-      `;
-    } else if (amenityType === 'hotel') {
-      overpassFilter = `
-        node["tourism"~"hotel|hostel|guest_house"](around:${rad},${lat},${lng});
-        way["tourism"~"hotel|hostel|guest_house"](around:${rad},${lat},${lng});
-      `;
-    } else if (amenityType === 'emergency') {
-      overpassFilter = `
-        node["amenity"~"hospital|pharmacy|clinic|doctors"](around:${rad},${lat},${lng});
-        way["amenity"~"hospital|pharmacy|clinic|doctors"](around:${rad},${lat},${lng});
-      `;
-    } else if (amenityType === 'financial') {
-      overpassFilter = `
-        node["amenity"~"atm|bank|bureau_de_change"](around:${rad},${lat},${lng});
-        way["amenity"~"atm|bank|bureau_de_change"](around:${rad},${lat},${lng});
-      `;
+    
+    if (requestedTypes.includes('all')) {
+      overpassFilter = Object.values(categoryFilters).join('\n');
     } else {
-      overpassFilter = `
-        node["amenity"="${amenityType}"](around:${rad},${lat},${lng});
-        way["amenity"="${amenityType}"](around:${rad},${lat},${lng});
-      `;
+      requestedTypes.forEach(t => {
+        if (categoryFilters[t]) {
+          overpassFilter += categoryFilters[t];
+        } else {
+          overpassFilter += `
+            nwr["amenity"="${t}"](around:${rad},${lat},${lng});
+            nwr["tourism"="${t}"](around:${rad},${lat},${lng});
+            nwr["shop"="${t}"](around:${rad},${lat},${lng});
+            nwr["historic"="${t}"](around:${rad},${lat},${lng});
+          `;
+        }
+      });
     }
 
     const overpassQuery = `
-      [out:json][timeout:25];
+      [out:json][timeout:30];
       (
         ${overpassFilter}
       );
-      out center body;
+      out center body 150;
     `;
 
     const data = await axiosGet(`https://overpass-api.de/api/interpreter`, {
