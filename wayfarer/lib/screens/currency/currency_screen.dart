@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../services/api_service.dart';
+import '../../widgets/wayfarer_app_bar.dart';
 
 class CurrencyScreen extends StatefulWidget {
   const CurrencyScreen({super.key});
@@ -126,6 +127,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
+      appBar: WayfarerAppBar(showMenu: false),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
         backgroundColor: const Color(0xFFF97316),
@@ -188,44 +190,6 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                 ),
               ),
             ],
-          ),
-        ),
-        // Top bar
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5),
-                        ),
-                        child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text('Wayfarer', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
-                  ],
-                ),
-                Container(
-                  width: 34, height: 34,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white54, width: 2),
-                    color: Colors.white.withValues(alpha: 0.2),
-                  ),
-                  child: const Icon(Icons.person, color: Colors.white, size: 18),
-                ),
-              ],
-            ),
           ),
         ),
       ],

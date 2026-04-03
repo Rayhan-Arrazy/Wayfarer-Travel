@@ -9,6 +9,7 @@ import '../../config/routes.dart';
 import '../../models/trip_model.dart';
 import '../../models/journal_model.dart';
 import '../../widgets/loading_widget.dart';
+import '../../widgets/wayfarer_app_bar.dart';
 
 class DashboardTab extends StatefulWidget {
   const DashboardTab({super.key});
@@ -43,31 +44,15 @@ class _DashboardTabState extends State<DashboardTab> {
     final userName = auth.user?.name.split(' ').first ?? 'Elias';
     final dateStr = DateFormat('EEEE, MMM d').format(DateTime.now()).toUpperCase();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+    return Column(
+      children: [
+        WayfarerAppBar(),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // App Bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        onPressed: () => Scaffold.of(context).openDrawer(),
-                        icon: const Icon(Icons.menu, color: Color(0xFF132F5C)),
-                      ),
-                      Text('Wayfarer', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF1D4E89))),
-                      const CircleAvatar(
-                        radius: 20,
-                        backgroundImage: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80'),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 32),
                   Text(dateStr, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.0)),
                   const SizedBox(height: 4),
@@ -79,18 +64,22 @@ class _DashboardTabState extends State<DashboardTab> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Essential Helpers', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                      TextButton(onPressed: () {
-                        // Navigate to Tools tab via the main dashboard controller or direct route
-                         Navigator.pushNamed(context, AppRoutes.tools);
-                      }, child: Text('Manage Tools', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C)))),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _buildHelperCard('Converter', 'Live rates for EUR, USD...', Icons.sync),
+                      _buildHelperCard('Converter', 'Live rates for EUR, USD...', Icons.sync, () {}),
                       const SizedBox(width: 16),
-                      _buildHelperCard('Guide', 'Cultural etiquette phrases...', Icons.menu_book),
+                      _buildHelperCard('Guide', 'Cultural etiquette phrases...', Icons.menu_book, () {}),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _buildHelperCard('Budgeter', 'Track your expenses', Icons.account_balance_wallet, () {}),
+                      const SizedBox(width: 16),
+                      _buildHelperCard('Weather', 'Check current conditions', Icons.cloud, () {}),
                     ],
                   ),
 
@@ -107,49 +96,42 @@ class _DashboardTabState extends State<DashboardTab> {
                   if (recentMemory != null) ...[
                     _buildRecentMemory(recentMemory),
                   ],
-                  const SizedBox(height: 100),
-                ],
-              ),
+                const SizedBox(height: 100),
+              ],
             ),
-            // Floating Action Button
-            Positioned(
-              right: 24,
-              bottom: 24,
-              child: FloatingActionButton(
-                onPressed: () => Navigator.pushNamed(context, AppRoutes.journalAdd),
-                backgroundColor: const Color(0xFF0F4C81),
-                child: const Icon(Icons.add, color: Colors.white, size: 28),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildHelperCard(String title, String subtitle, IconData icon) {
+  Widget _buildHelperCard(String title, String subtitle, IconData icon, VoidCallback onTap) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
-          border: Border.all(color: const Color(0xFFF1F5F9)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: const Color(0xFF132F5C), size: 24),
-            ),
-            const SizedBox(height: 20),
-            Text(title, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-            const SizedBox(height: 4),
-            Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B), height: 1.4)),
-          ],
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 180, // Fixed height for same size
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
+            border: Border.all(color: const Color(0xFFF1F5F9)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, color: const Color(0xFF132F5C), size: 24),
+              ),
+              const SizedBox(height: 20),
+              Text(title, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+              const SizedBox(height: 4),
+              Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B), height: 1.4)),
+            ],
+          ),
         ),
       ),
     );
@@ -256,11 +238,6 @@ class _DashboardTabState extends State<DashboardTab> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Recent Memory', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-            TextButton.icon(
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.journalAdd), 
-              icon: const Icon(Icons.edit_note, size: 20, color: Color(0xFF132F5C)), 
-              label: Text('Write', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C)))
-            ),
           ],
         ),
         const SizedBox(height: 16),

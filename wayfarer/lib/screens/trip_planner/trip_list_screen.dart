@@ -4,6 +4,7 @@ import '../../config/theme.dart';
 import '../../config/routes.dart';
 import '../../services/api_service.dart';
 import '../../models/trip_model.dart';
+import '../../widgets/wayfarer_app_bar.dart';
 
 class TripListScreen extends StatefulWidget {
   const TripListScreen({super.key});
@@ -45,21 +46,7 @@ class _TripListScreenState extends State<TripListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        leading: const Icon(Icons.menu, color: AppTheme.primaryColor),
-        title: Text('Wayfarer', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16.0),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundImage: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80'),
-            ),
-          ),
-        ],
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: WayfarerAppBar(showMenu: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(

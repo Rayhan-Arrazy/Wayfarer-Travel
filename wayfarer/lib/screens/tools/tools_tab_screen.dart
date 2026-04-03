@@ -5,6 +5,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:translator/translator.dart';
 import '../../config/routes.dart';
 import '../../providers/currency_provider.dart';
+import '../../widgets/wayfarer_app_bar.dart';
 
 class ToolsTabScreen extends StatefulWidget {
   const ToolsTabScreen({super.key});
@@ -153,52 +154,39 @@ class _ToolsTabScreenState extends State<ToolsTabScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row (Matches Home Menu)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    onPressed: () => Scaffold.of(context).openDrawer(),
-                    icon: const Icon(Icons.menu, color: Color(0xFF132F5C)),
-                  ),
-                  Text('Wayfarer', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF1D4E89))),
-                  const CircleAvatar(
-                    radius: 20,
-                    backgroundImage: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              Text('QUICK UTILITY', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
-              const SizedBox(height: 8),
-              Text('Traveler Utility Tools', style: GoogleFonts.outfit(fontSize: 36, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A), height: 1.1)),
-              const SizedBox(height: 12),
-              Text('Essential utilities designed for the modern nomad. High-precision tools to navigate the world with effortless clarity.', 
-                style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B), height: 1.6)),
-              
-              const SizedBox(height: 48),
-              _buildCurrencyConverterSection(),
-              const SizedBox(height: 48),
-              _buildBudgeterCard(),
-              const SizedBox(height: 48),
-              _buildTextTranslation(),
-              const SizedBox(height: 48),
-              _buildWorldWeather(),
-              const SizedBox(height: 48),
-              _buildWorldTimeZones(),
-              const SizedBox(height: 120),
-            ],
+    return Column(
+      children: [
+        WayfarerAppBar(),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 32),
+                Text('QUICK UTILITY', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
+                const SizedBox(height: 8),
+                Text('Traveler Utility Tools', style: GoogleFonts.outfit(fontSize: 36, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A), height: 1.1)),
+                const SizedBox(height: 12),
+                Text('Essential utilities designed for the modern nomad. High-precision tools to navigate the world with effortless clarity.', 
+                  style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B), height: 1.6)),
+                
+                const SizedBox(height: 48),
+                _buildCurrencyConverterSection(),
+                const SizedBox(height: 48),
+                _buildBudgeterCard(),
+                const SizedBox(height: 48),
+                _buildTextTranslation(),
+                const SizedBox(height: 48),
+                _buildWorldWeather(),
+                const SizedBox(height: 48),
+                _buildWorldTimeZones(),
+                const SizedBox(height: 120),
+              ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -307,7 +295,7 @@ class _ToolsTabScreenState extends State<ToolsTabScreen> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: currencies.contains(value) ? value : currencies.first,
-          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1D4E89)),
+          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C)),
           onChanged: onChanged,
           items: currencies.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
         ),
@@ -501,7 +489,7 @@ class _ToolsTabScreenState extends State<ToolsTabScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(child: Text(city, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF475569)))),
-              Icon(icon, size: 20, color: const Color(0xFF1D4E89)),
+              Icon(icon, size: 20, color: const Color(0xFF132F5C)),
             ],
           ),
           const Spacer(),

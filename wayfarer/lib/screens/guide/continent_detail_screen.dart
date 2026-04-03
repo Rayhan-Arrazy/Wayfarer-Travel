@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../widgets/wayfarer_app_bar.dart';
 
 class ContinentDetailScreen extends StatelessWidget {
   final String continent;
@@ -9,26 +10,7 @@ class ContinentDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        leadingWidth: 100,
-        leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            margin: const EdgeInsets.only(left: 24, top: 10, bottom: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5),
-            ),
-            child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
-          ),
-        ),
-        title: Text('Wayfarer', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFF1E2E46))),
-        titleSpacing: 0,
-        centerTitle: false,
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: WayfarerAppBar(showMenu: false),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

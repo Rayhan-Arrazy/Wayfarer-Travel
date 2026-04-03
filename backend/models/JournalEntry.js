@@ -8,7 +8,7 @@ const journalEntrySchema = new mongoose.Schema({
   },
   tripId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Planning',
+    ref: 'Trip',
     required: false,
   },
   title: {

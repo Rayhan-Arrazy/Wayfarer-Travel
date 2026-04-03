@@ -7,6 +7,7 @@ import '../../providers/budget_provider.dart';
 import '../../models/budget_model.dart';
 import '../../config/routes.dart';
 import '../../widgets/loading_widget.dart';
+import '../../widgets/wayfarer_app_bar.dart';
 
 class BudgeterScreen extends StatefulWidget {
   const BudgeterScreen({super.key});
@@ -36,7 +37,7 @@ class _BudgeterScreenState extends State<BudgeterScreen> {
     final trip = tp.upcomingTrip;
     if (trip == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Budgeter')),
+        appBar: WayfarerAppBar(showMenu: false),
         body: const Center(child: Text('No active trip found. Create a trip first!')),
       );
     }
@@ -46,7 +47,7 @@ class _BudgeterScreenState extends State<BudgeterScreen> {
     if (budget == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBar(title: const Text('Budgeter')),
+        appBar: WayfarerAppBar(showMenu: false),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -75,19 +76,7 @@ class _BudgeterScreenState extends State<BudgeterScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF132F5C)),
-        ),
-        title: Text('The Wayfarer', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF1D4E89))),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.person, color: Color(0xFF132F5C))),
-        ],
-      ),
+      appBar: WayfarerAppBar(showMenu: false),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -102,7 +91,7 @@ class _BudgeterScreenState extends State<BudgeterScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('\$${totalBudget.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 48, fontWeight: FontWeight.w800, color: const Color(0xFF1D4E89).withValues(alpha: 0.8), height: 1.0)),
+                    Text('\$${totalBudget.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 48, fontWeight: FontWeight.w800, color: const Color(0xFF132F5C).withValues(alpha: 0.8), height: 1.0)),
                     const SizedBox(height: 8),
                     Text('Total allocation for ${budget.title}', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
                   ],

@@ -3,10 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/trip_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../models/trip_model.dart';
 import '../../config/routes.dart';
 import '../../widgets/loading_widget.dart';
+import '../../widgets/wayfarer_app_bar.dart';
 
 class PlanTab extends StatefulWidget {
   const PlanTab({super.key});
@@ -27,36 +27,19 @@ class _PlanTabState extends State<PlanTab> {
   @override
   Widget build(BuildContext context) {
     final tripProvider = context.watch<TripProvider>();
-    final auth = context.watch<AuthProvider>();
     final trips = tripProvider.trips;
 
     if (tripProvider.isLoading) return const LoadingWidget();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: () => Scaffold.of(context).openDrawer(),
-          icon: const Icon(Icons.menu, color: Color(0xFF132F5C)),
-        ),
-        title: Text('Wayfarer', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF1D4E89))),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundImage: NetworkImage(auth.user?.avatar ?? 'https://i.pravatar.cc/150?u=alex'),
-            ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Column(
+      children: [
+        WayfarerAppBar(),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             Text('WORKSPACE', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.0)),
             const SizedBox(height: 8),
             Text('Trip Planning Hub', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
@@ -67,7 +50,7 @@ class _PlanTabState extends State<PlanTab> {
             const SizedBox(height: 48),
             Row(
               children: [
-                const Icon(Icons.airplanemode_active, color: Color(0xFF1D4E89), size: 20),
+                const Icon(Icons.airplanemode_active, color: Color(0xFF132F5C), size: 20),
                 const SizedBox(width: 12),
                 Text('Active & Upcoming Trips', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
               ],
@@ -83,8 +66,10 @@ class _PlanTabState extends State<PlanTab> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  ],
+);
+}
 
   Widget _buildNewJourneyButton(BuildContext context) {
     return SizedBox(

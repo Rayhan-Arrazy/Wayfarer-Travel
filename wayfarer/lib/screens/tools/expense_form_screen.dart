@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/budget_provider.dart';
 import '../../models/budget_model.dart';
+import '../../widgets/wayfarer_app_bar.dart';
 
 class ExpenseFormScreen extends StatefulWidget {
   final Map<String, dynamic>? initialData;
@@ -98,23 +99,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.close, color: Color(0xFF132F5C)),
-        ),
-        title: Text(_isEdit ? 'Edit Expense' : 'Add Expense', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF1D4E89))),
-        centerTitle: false,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 24.0),
-            child: Center(
-              child: Text('The Wayfarer', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF1D4E89))),
-            ),
-          ),
-        ],
+      appBar: WayfarerAppBar(
+        showMenu: false,
+        onBack: () => Navigator.pop(context),
       ),
       body: _isLoading ? const Center(child: CircularProgressIndicator()) : SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -123,8 +110,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
           children: [
             Text('FINANCIAL TRACKING', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
             const SizedBox(height: 8),
-            Text('Refine your itinerary costs.', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-            const SizedBox(height: 48),
+            Text(_isEdit ? 'Edit Expense' : 'Add Expense', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+            const SizedBox(height: 4),
+            Text('Refine your itinerary costs.', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
+            const SizedBox(height: 40),
             
             _buildFieldLabel('Item Name'),
             _buildTextField(_nameController, 'e.g. Artisanal Coffee in Kyoto', null),

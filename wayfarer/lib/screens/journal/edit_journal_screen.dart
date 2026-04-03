@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../providers/journal_provider.dart';
 import '../../models/journal_model.dart';
 import '../../widgets/loading_widget.dart';
+import '../../widgets/wayfarer_app_bar.dart';
 
 class EditJournalScreen extends StatefulWidget {
   final JournalEntryModel entry;
@@ -104,30 +105,7 @@ class _EditJournalScreenState extends State<EditJournalScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        leadingWidth: 100,
-        leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            margin: const EdgeInsets.only(left: 24, top: 10, bottom: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFDBEAFE), width: 1.5, style: BorderStyle.solid), // Dashed look roughly with light blue
-            ),
-            child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
-          ),
-        ),
-        title: Text('Edit Journal Entry', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF132F5C))),
-        centerTitle: false,
-        titleSpacing: 0,
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.history, color: Color(0xFF132F5C))),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.person, color: Color(0xFF132F5C))),
-        ],
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: WayfarerAppBar(showMenu: false),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -137,7 +115,7 @@ class _EditJournalScreenState extends State<EditJournalScreen> {
             children: [
               Text('JOURNAL DETAILS', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF94A3B8), letterSpacing: 1.0)),
               const SizedBox(height: 8),
-              Text('Refine your memory', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+              Text('Edit Journal Entry', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
               const SizedBox(height: 8),
               Text('Update the details of your visit to ${widget.entry.location?.name ?? 'your destination'}.', 
                 style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),

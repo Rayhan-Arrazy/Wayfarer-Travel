@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../config/routes.dart';
 import '../../services/api_service.dart';
+import '../../widgets/wayfarer_app_bar.dart';
 
 class ExploreTab extends StatefulWidget {
   const ExploreTab({super.key});
@@ -161,143 +162,133 @@ class _ExploreTabState extends State<ExploreTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: Builder(
-          builder: (context) => IconButton(
-            onPressed: () => Scaffold.of(context).openDrawer(),
-            icon: const Icon(Icons.menu, color: Color(0xFF132F5C)),
-          ),
-        ),
-        title: Text('Wayfarer', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF1D4E89))),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.person, color: Color(0xFF132F5C))),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadNearbyData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Hero
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  image: DecorationImage(
-                    image: const NetworkImage('https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80'),
-                    fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(Colors.white.withOpacity(0.9), BlendMode.lighten),
-                  ),
-                  border: Border.all(color: const Color(0xFFF1F5F9)),
-                ),
-                child: Column(
-                  children: [
-                     Container(
-                       padding: const EdgeInsets.all(12),
-                       decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(12)),
-                       child: const Icon(Icons.map, color: Color(0xFF132F5C), size: 32),
-                     ),
-                     const SizedBox(height: 24),
-                     Text('Nearby Explorer', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
-                     const SizedBox(height: 8),
-                     Text('ESSENTIAL DATA IN YOUR AREA', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
-                     const SizedBox(height: 24),
-                     SizedBox(
-                       height: 56,
-                       width: 200,
-                       child: ElevatedButton(
-                          onPressed: () => Navigator.pushNamed(context, AppRoutes.map),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF132F5C),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: Text('Live Map View', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold)),
-                       ),
-                     ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 48),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      children: [
+        WayfarerAppBar(),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadNearbyData,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Hero
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      image: DecorationImage(
+                        image: const NetworkImage('https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80'),
+                        fit: BoxFit.cover,
+                        colorFilter: ColorFilter.mode(Colors.white.withOpacity(0.9), BlendMode.lighten),
+                      ),
+                      border: Border.all(color: const Color(0xFFF1F5F9)),
+                    ),
+                    child: Column(
+                      children: [
+                         Container(
+                           padding: const EdgeInsets.all(12),
+                           decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(12)),
+                           child: const Icon(Icons.map, color: Color(0xFF132F5C), size: 32),
+                         ),
+                         const SizedBox(height: 24),
+                         Text('Nearby Explorer', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+                         const SizedBox(height: 8),
+                         Text('ESSENTIAL DATA IN YOUR AREA', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
+                         const SizedBox(height: 24),
+                         SizedBox(
+                           height: 56,
+                           width: 200,
+                           child: ElevatedButton(
+                              onPressed: () => Navigator.pushNamed(context, AppRoutes.map),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF132F5C),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: Text('Live Map View', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold)),
+                           ),
+                         ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 48),
+
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('What matters\nnearby', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46), height: 1.1)),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(8)),
-                        child: Text('LIVE', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: const Color(0xFF166534))),
+                      Row(
+                        children: [
+                          Text('What matters\nnearby', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46), height: 1.1)),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(8)),
+                            child: Text('LIVE', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: const Color(0xFF166534))),
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('500M RADIUS ACTIVE', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w900, color: const Color(0xFFEF4444), letterSpacing: 1.0)),
+                          Text(
+                            _currentPosition != null 
+                            ? '${_currentPosition!.latitude.toStringAsFixed(4)} N, ${_currentPosition!.longitude.toStringAsFixed(4)} E'
+                            : 'GPS Locating...', 
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('500M RADIUS ACTIVE', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w900, color: const Color(0xFFEF4444), letterSpacing: 1.0)),
-                      Text(
-                        _currentPosition != null 
-                        ? '${_currentPosition!.latitude.toStringAsFixed(4)} N, ${_currentPosition!.longitude.toStringAsFixed(4)} E'
-                        : 'GPS Locating...', 
-                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))
+
+                  const SizedBox(height: 32),
+
+                  if (_isLoading)
+                    const Center(child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: CircularProgressIndicator(color: Color(0xFF132F5C)),
+                    ))
+                  else if (_categorizedItems.isEmpty)
+                    Center(child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 60),
+                      child: Column(
+                        children: [
+                          Icon(Icons.location_searching_rounded, size: 48, color: Colors.grey[200]),
+                          const SizedBox(height: 16),
+                          Text('Still searching for locations...', style: GoogleFonts.inter(color: Colors.grey)),
+                          const SizedBox(height: 8),
+                          Text('Check connection or zoom out map.', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400])),
+                        ],
                       ),
-                    ],
-                  ),
+                    ))
+                  else
+                    ..._categorizedItems.entries.map((entry) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 20, top: 4),
+                          child: Text(entry.key, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w900, color: const Color(0xFF94A3B8), letterSpacing: 2)),
+                        ),
+                        ...entry.value.map((item) => _buildNearbyItem(item)),
+                        const SizedBox(height: 16),
+                      ],
+                    )),
+
+                  const SizedBox(height: 100),
                 ],
               ),
-
-              const SizedBox(height: 32),
-
-              if (_isLoading)
-                const Center(child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: CircularProgressIndicator(color: Color(0xFF132F5C)),
-                ))
-              else if (_categorizedItems.isEmpty)
-                Center(child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 60),
-                  child: Column(
-                    children: [
-                      Icon(Icons.location_searching_rounded, size: 48, color: Colors.grey[200]),
-                      const SizedBox(height: 16),
-                      Text('Still searching for locations...', style: GoogleFonts.inter(color: Colors.grey)),
-                      const SizedBox(height: 8),
-                      Text('Check connection or zoom out map.', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400])),
-                    ],
-                  ),
-                ))
-              else
-                ..._categorizedItems.entries.map((entry) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 20, top: 4),
-                      child: Text(entry.key, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w900, color: const Color(0xFF94A3B8), letterSpacing: 2)),
-                    ),
-                    ...entry.value.map((item) => _buildNearbyItem(item)),
-                    const SizedBox(height: 16),
-                  ],
-                )),
-
-              const SizedBox(height: 100),
-            ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 
