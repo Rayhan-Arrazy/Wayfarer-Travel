@@ -86,7 +86,7 @@ class ApiService {
     return _dio.get('trips', queryParameters: params);
   }
 
-  Future<Response> getTrip(String id) async {
+  Future<Response> getTripDetail(String id) async {
     return _dio.get('trips/$id');
   }
 
@@ -98,7 +98,7 @@ class ApiService {
     return _dio.put('trips/$id', data: data);
   }
 
-  Future<Response> toggleChecklistItem(String tripId, int itemIndex) async {
+  Future<Response> toggleTripChecklistItem(String tripId, int itemIndex) async {
     return _dio.put('trips/$tripId/checklist/$itemIndex');
   }
 
@@ -150,20 +150,6 @@ class ApiService {
     return _dio.delete('budgets/$id');
   }
 
-  // Favorites
-  Future<Response> getFavorites({String? type}) async {
-    final params = <String, dynamic>{};
-    if (type != null) params['type'] = type;
-    return _dio.get('/favorites', queryParameters: params);
-  }
-
-  Future<Response> addFavorite(Map<String, dynamic> data) async {
-    return _dio.post('/favorites', data: data);
-  }
-
-  Future<Response> removeFavorite(String id) async {
-    return _dio.delete('/favorites/$id');
-  }
 
   // Proxy APIs
   Future<Response> getCountryInfo(String code) async {

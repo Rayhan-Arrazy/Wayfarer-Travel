@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/trip_model.dart';
 import '../../providers/trip_provider.dart';
@@ -13,29 +14,41 @@ class EditTripScreen extends StatefulWidget {
 }
 
 class _EditTripScreenState extends State<EditTripScreen> {
-  late TextEditingController _destinationController;
-  late TextEditingController _departureController;
-  late TextEditingController _returnController;
-  late int _travelers;
-  bool _isLoading = false;
+  final _destinationController = TextEditingController();
+  final _departureController = TextEditingController();
+  final _returnController = TextEditingController();
+  
+  late int _adults;
+  late int _children;
 
+  final List<String> _checklistItems = ['Book Flights', 'Get Visa', 'Buy Insurance'];
+  final Set<String> _selectedChecklist = {};
+  
   late List<ItineraryActivity> _itinerary;
   final _activityTitleController = TextEditingController();
   final _activityTimeController = TextEditingController();
+  
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _destinationController = TextEditingController(text: widget.trip.destination);
-    _departureController = TextEditingController(text: _formatDate(widget.trip.startDate));
-    _returnController = TextEditingController(text: _formatDate(widget.trip.endDate));
-    _travelers = widget.trip.partySize;
+    _destinationController.text = widget.trip.destination;
+    _departureController.text = DateFormat('MM/dd/yyyy').format(widget.trip.startDate);
+    _returnController.text = DateFormat('MM/dd/yyyy').format(widget.trip.endDate);
+    
+    // Simple parsing for party size since original model is simpler
+    _adults = widget.trip.partySize;
+    _children = 0;
+    
     _itinerary = List.from(widget.trip.itinerary);
-  }
-
-  String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    
+    // Populate checklist if exists
+    for (var item in widget.trip.checklist) {
+      if (item.checked) {
+        _selectedChecklist.add(item.item);
+      }
+    }
   }
 
   @override
@@ -46,53 +59,6 @@ class _EditTripScreenState extends State<EditTripScreen> {
     _activityTitleController.dispose();
     _activityTimeController.dispose();
     super.dispose();
-  }
-
-  Future<void> _handleUpdate() async {
-    setState(() => _isLoading = true);
-    
-    final updatedTrip = widget.trip.copyWith(
-      destination: _destinationController.text,
-      partySize: _travelers,
-      itinerary: _itinerary,
-    );
-
-    final success = await context.read<TripProvider>().updateTrip(widget.trip.id, updatedTrip);
-    
-    if (mounted) {
-      setState(() => _isLoading = false);
-      if (success) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Trip updated successfully!')));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to update trip.')));
-      }
-    }
-  }
-
-  Future<void> _handleDelete() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Trip'),
-        content: const Text('Are you sure you want to delete this trip? This action is permanent.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-        ],
-      ),
-    );
-
-    if (confirm == true && mounted) {
-      setState(() => _isLoading = true);
-      final success = await context.read<TripProvider>().deleteTrip(widget.trip.id);
-      if (mounted) {
-        setState(() => _isLoading = false);
-        if (success) {
-          Navigator.pop(context);
-        }
-      }
-    }
   }
 
   @override
@@ -113,26 +79,24 @@ class _EditTripScreenState extends State<EditTripScreen> {
             child: const Icon(Icons.arrow_back, color: Color(0xFF64748B), size: 18),
           ),
         ),
-        title: Text('Edit Trip', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+        title: Text('EDIT TRIP', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFF1E2E46), letterSpacing: 1.0)),
         titleSpacing: 0,
         centerTitle: false,
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: _isLoading ? const Center(child: CircularProgressIndicator()) : SingleChildScrollView(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 16),
-            Text(widget.trip.destination.contains(',') ? widget.trip.destination.split(',').first + ' Trip' : widget.trip.destination + ' Trip', 
-                style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
-            const SizedBox(height: 8),
             Text('MANAGE DETAILS', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
+            const SizedBox(height: 8),
+            Text(widget.trip.destination, style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+            const SizedBox(height: 48),
             
-            const SizedBox(height: 32),
             _buildFieldLabel('DESTINATION'),
-            _buildUnderlineTextField(_destinationController),
+            _buildTextField(_destinationController, 'Search cities, regions or country', prefix: const Icon(Icons.search, size: 20)),
             
             const SizedBox(height: 32),
             Row(
@@ -142,17 +106,17 @@ class _EditTripScreenState extends State<EditTripScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildFieldLabel('DEPARTURE'),
-                      _buildUnderlineTextField(_departureController),
+                      _buildDateTile(_departureController, () => _selectDate(context, _departureController, true)),
                     ],
                   ),
                 ),
-                const SizedBox(width: 24),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildFieldLabel('RETURN'),
-                      _buildUnderlineTextField(_returnController),
+                      _buildDateTile(_returnController, () => _selectDate(context, _returnController, false)),
                     ],
                   ),
                 ),
@@ -161,23 +125,13 @@ class _EditTripScreenState extends State<EditTripScreen> {
             
             const SizedBox(height: 32),
             _buildFieldLabel('TRAVELERS'),
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('$_travelers', style: GoogleFonts.inter(fontSize: 20, color: const Color(0xFF1E293B))),
-                  Row(
-                    children: [
-                      IconButton(onPressed: () => setState(() => _travelers > 1 ? _travelers-- : null), icon: const Icon(Icons.remove, color: Color(0xFF475569))),
-                      const SizedBox(width: 8),
-                      IconButton(onPressed: () => setState(() => _travelers++), icon: const Icon(Icons.add, color: Color(0xFF475569))),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const Divider(color: Color(0xFFE2E8F0), thickness: 1),
+            _buildCounterField('Adults', '18+ years', _adults, (val) => setState(() => _adults = val)),
+            const SizedBox(height: 12),
+            _buildCounterField('Children', '0-17 years', _children, (val) => setState(() => _children = val)),
+            
+            const SizedBox(height: 32),
+            _buildFieldLabel('QUICK CHECKLIST ITEMS'),
+            _buildQuickChecklist(),
             
             const SizedBox(height: 32),
             _buildFieldLabel('MANAGE ITINERARY'),
@@ -185,35 +139,40 @@ class _EditTripScreenState extends State<EditTripScreen> {
             _buildItinerarySection(),
             
             const SizedBox(height: 48),
-            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton(
-                onPressed: _handleUpdate,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E40AF),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            if (_isSaving) 
+              const Center(child: CircularProgressIndicator())
+            else ...[
+              SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: ElevatedButton(
+                  onPressed: _handleUpdate,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4A6083),
+                    elevation: 4,
+                    shadowColor: const Color(0xFF1E2E46).withValues(alpha: 0.3),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text('Update Trip', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
-                child: Text('Update Trip', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
-            ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: OutlinedButton.icon(
+                  onPressed: _handleDelete,
+                  icon: const Icon(Icons.delete_outline, color: Color(0xFF7C2D12), size: 22),
+                  label: Text('Delete Trip', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF7C2D12))),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFF1F5F9)),
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
             
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: OutlinedButton.icon(
-                onPressed: _handleDelete,
-                icon: const Icon(Icons.delete_outline, color: Color(0xFF7C2D12), size: 22),
-                label: Text('Delete Trip', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF7C2D12))),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFF1F5F9)),
-                  backgroundColor: const Color(0xFFF8FAFC),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-            ),
             const SizedBox(height: 40),
           ],
         ),
@@ -223,21 +182,151 @@ class _EditTripScreenState extends State<EditTripScreen> {
 
   Widget _buildFieldLabel(String label) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2.0),
-      child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 0.5)),
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.0)),
     );
   }
 
-  Widget _buildUnderlineTextField(TextEditingController controller) {
-    return TextField(
-      controller: controller,
-      style: GoogleFonts.inter(fontSize: 16, color: const Color(0xFF1E293B)),
-      decoration: const InputDecoration(
-        border: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE2E8F0))),
-        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE2E8F0))),
-        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF475569))),
-        isCollapsed: true,
-        contentPadding: EdgeInsets.symmetric(vertical: 8),
+  Widget _buildTextField(TextEditingController controller, String hint, {Widget? prefix}) {
+    return Container(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE2E8F0))),
+      child: TextField(
+        controller: controller,
+        style: GoogleFonts.inter(fontSize: 14),
+        decoration: InputDecoration(hintText: hint, prefixIcon: prefix, border: InputBorder.none, contentPadding: const EdgeInsets.all(16)),
+      ),
+    );
+  }
+
+  Future<void> _selectDate(BuildContext context, TextEditingController controller, bool isDeparture) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: isDeparture ? widget.trip.startDate : widget.trip.endDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF1E2E46),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF1E2E46),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        controller.text = DateFormat('MM/dd/yyyy').format(picked);
+      });
+    }
+  }
+
+  Widget _buildDateTile(TextEditingController controller, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                controller.text,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF1E2E46),
+                ),
+              ),
+            ),
+            const Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF64748B)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickChecklist() {
+    return Column(
+      children: _checklistItems.map((item) {
+        final isSelected = _selectedChecklist.contains(item);
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              if (isSelected) {
+                _selectedChecklist.remove(item);
+              } else {
+                _selectedChecklist.add(item);
+              }
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFFF8FAFC) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFE2E8F0),
+                width: isSelected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFCBD5E1),
+                      width: 2,
+                    ),
+                    color: isSelected ? const Color(0xFF1E2E46) : Colors.transparent,
+                  ),
+                  child: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  item,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFF475569),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildCounterField(String title, String subtitle, int value, Function(int) onChanged) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              IconButton(onPressed: () => value > 0 ? onChanged(value - 1) : null, icon: const Icon(Icons.remove_circle_outline)),
+              Text('$value', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+              IconButton(onPressed: () => onChanged(value + 1), icon: const Icon(Icons.add_circle)),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -274,10 +363,7 @@ class _EditTripScreenState extends State<EditTripScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(8)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -295,5 +381,60 @@ class _EditTripScreenState extends State<EditTripScreen> {
       _activityTitleController.clear();
       _activityTimeController.clear();
     });
+  }
+
+  Future<void> _handleUpdate() async {
+    setState(() => _isSaving = true);
+    
+    final updatedTrip = widget.trip.copyWith(
+      destination: _destinationController.text,
+      partySize: _adults + _children,
+      itinerary: _itinerary,
+      startDate: DateFormat('MM/dd/yyyy').parse(_departureController.text),
+      endDate: DateFormat('MM/dd/yyyy').parse(_returnController.text),
+    );
+
+    // Update checklist in model
+    final updatedChecklist = updatedTrip.checklist.map((item) {
+      return item.copyWith(checked: _selectedChecklist.contains(item.item));
+    }).toList();
+    
+    final finalTrip = updatedTrip.copyWith(checklist: updatedChecklist);
+    
+    final success = await context.read<TripProvider>().updateTrip(widget.trip.id, finalTrip);
+    
+    if (mounted) {
+      setState(() => _isSaving = false);
+      if (success) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Trip updated successfully!')));
+      }
+    }
+  }
+
+  Future<void> _handleDelete() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Trip'),
+        content: const Text('Are you sure you want to delete this trip? This action is permanent.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      setState(() => _isSaving = true);
+      final success = await context.read<TripProvider>().deleteTrip(widget.trip.id);
+      if (mounted) {
+        setState(() => _isSaving = false);
+        if (success) {
+          Navigator.pop(context);
+          Navigator.pop(context); // Pop back twice to get out of preview as well
+        }
+      }
+    }
   }
 }

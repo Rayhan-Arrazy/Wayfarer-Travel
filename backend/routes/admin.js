@@ -1,6 +1,6 @@
 const express = require('express');
 const User = require('../models/User');
-const Trip = require('../models/Trip');
+const Planning = require('../models/Planning');
 const JournalEntry = require('../models/JournalEntry');
 const CountryGuide = require('../models/CountryGuide');
 const auth = require('../middleware/auth');
@@ -16,9 +16,9 @@ router.get('/dashboard', async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
     const activeUsers = await User.countDocuments({ isActive: true });
-    const totalTrips = await Trip.countDocuments();
-    const activeTrips = await Trip.countDocuments({ status: 'active' });
-    const completedTrips = await Trip.countDocuments({ status: 'completed' });
+    const totalTrips = await Planning.countDocuments();
+    const activeTrips = await Planning.countDocuments({ status: 'active' });
+    const completedTrips = await Planning.countDocuments({ status: 'completed' });
     const totalJournalEntries = await JournalEntry.countDocuments();
 
     // Recent users (last 7 days)
@@ -26,7 +26,7 @@ router.get('/dashboard', async (req, res) => {
     const newUsersThisWeek = await User.countDocuments({ createdAt: { $gte: weekAgo } });
 
     // Top destinations
-    const topDestinations = await Trip.aggregate([
+    const topDestinations = await Planning.aggregate([
       { $group: { _id: '$countryCode', count: { $sum: 1 }, destination: { $first: '$destination' } } },
       { $sort: { count: -1 } },
       { $limit: 10 },
@@ -135,7 +135,7 @@ router.delete('/users/:id', async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    await Trip.deleteMany({ userId: req.params.id });
+    await Planning.deleteMany({ userId: req.params.id });
     await JournalEntry.deleteMany({ userId: req.params.id });
     res.json({ message: 'User and associated data deleted' });
   } catch (error) {
@@ -148,8 +148,8 @@ router.get('/trips', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
-    const total = await Trip.countDocuments();
-    const trips = await Trip.find()
+    const total = await Planning.countDocuments();
+    const trips = await Planning.find()
       .populate('userId', 'name email')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -163,7 +163,7 @@ router.get('/trips', async (req, res) => {
 // @route   DELETE /api/admin/trips/:id
 router.delete('/trips/:id', async (req, res) => {
   try {
-    const trip = await Trip.findByIdAndDelete(req.params.id);
+    const trip = await Planning.findByIdAndDelete(req.params.id);
     if (!trip) return res.status(404).json({ message: 'Trip not found' });
     await JournalEntry.deleteMany({ tripId: req.params.id });
     res.json({ message: 'Trip deleted' });

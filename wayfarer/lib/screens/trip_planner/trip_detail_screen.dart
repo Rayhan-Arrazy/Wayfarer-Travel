@@ -8,6 +8,7 @@ import '../../config/theme.dart';
 import '../../services/api_service.dart';
 import '../../models/trip_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/trip_provider.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final String tripId;
@@ -36,7 +37,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   Future<void> _loadAllData() async {
     setState(() => _isLoading = true);
     try {
-      final response = await _api.getTrip(widget.tripId);
+      final response = await ApiService().getTripDetail(widget.tripId);
       final trip = TripModel.fromJson(response.data);
       
       _trip = trip;
@@ -83,12 +84,19 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   Future<void> _toggleChecklist(int index) async {
     if (_trip == null) return;
     try {
-      await _api.toggleChecklistItem(widget.tripId, index);
+      final tp = Provider.of<TripProvider>(context, listen: false);
+      final updatedChecklist = _trip!.checklist.asMap().entries.map((entry) {
+        if (entry.key == index) {
+          return entry.value.copyWith(checked: !entry.value.checked);
+        }
+        return entry.value;
+      }).toList();
       
-      // Re-fetch trip data softly without showing main loading spinner
-      final response = await _api.getTrip(widget.tripId);
+      final updatedTrip = _trip!.copyWith(checklist: updatedChecklist);
+      await tp.updateTrip(widget.tripId, updatedTrip);
+      
       setState(() {
-        _trip = TripModel.fromJson(response.data);
+        _trip = updatedTrip;
       });
     } catch (e) {
       if (mounted) {
@@ -501,15 +509,72 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                           )
                         ],
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
             ),
+            const SizedBox(height: 32),
+            // ACTION BUTTONS
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pushNamed(context, '/trips/edit', arguments: _trip),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E2E46),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text('Edit Trip', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _handleDeleteConfirm(context),
+                      icon: const Icon(Icons.delete_outline, color: Color(0xFF7C2D12), size: 22),
+                      label: Text('Delete Trip', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF7C2D12))),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFF1F5F9)),
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 100),
           ],
         ),
       ),
     );
+  }
+
+  void _handleDeleteConfirm(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Trip?'),
+        content: const Text('This action will permanently remove this trip and its itinerary.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCEL')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('DELETE', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      final provider = context.read<TripProvider>();
+      await provider.deleteTrip(widget.tripId);
+      if (mounted) Navigator.pop(context);
+    }
   }
 
   Widget _buildWeatherDay(String day, IconData icon, String temp) {

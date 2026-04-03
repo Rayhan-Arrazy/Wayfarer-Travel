@@ -97,7 +97,6 @@ class _PlanTabState extends State<PlanTab> {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF4A6083),
           elevation: 4,
-          shadowColor: const Color(0xFF1E2E46).withValues(alpha: 0.3),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
@@ -107,41 +106,44 @@ class _PlanTabState extends State<PlanTab> {
   Widget _buildTripCard(BuildContext context, TripModel trip) {
     String dateRange = "${DateFormat('MMM d').format(trip.startDate)} — ${DateFormat('MMM d, y').format(trip.endDate)}";
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(trip.destination, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today, size: 14, color: Color(0xFF64748B)),
-                    const SizedBox(width: 8),
-                    Text(dateRange, style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
-                  ],
-                ),
-              ],
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.tripDetail, arguments: trip.id),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF1F5F9)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1E2E46).withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-          ),
-          IconButton(
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.editTrip, arguments: trip),
-            icon: const Icon(Icons.edit_outlined, color: Color(0xFF64748B)),
-          ),
-          IconButton(
-            onPressed: () => _confirmDelete(context, trip.id),
-            icon: const Icon(Icons.delete_outline, color: Color(0xFF64748B)),
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(trip.destination, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 14, color: Color(0xFF64748B)),
+                      const SizedBox(width: 8),
+                      Text(dateRange, style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Color(0xFFCBD5E1)),
+          ],
+        ),
       ),
     );
   }
@@ -156,23 +158,5 @@ class _PlanTabState extends State<PlanTab> {
         ],
       ),
     );
-  }
-
-  void _confirmDelete(BuildContext context, String id) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Trip?'),
-        content: const Text('This action will permanently remove this trip and its itinerary.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCEL')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('DELETE', style: TextStyle(color: Colors.red))),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      final provider = context.read<TripProvider>();
-      await provider.deleteTrip(id);
-    }
   }
 }

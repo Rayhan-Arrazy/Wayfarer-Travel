@@ -47,7 +47,7 @@ class _CreateJournalEntryScreenState extends State<CreateJournalEntryScreen> {
 
   Future<void> _loadTrips() async {
     try {
-      final response = await _api.getTrips();
+      final response = await ApiService().getTrips();
       final List data = response.data;
       setState(() {
         _trips = data.map((t) => TripModel.fromJson(t)).toList();

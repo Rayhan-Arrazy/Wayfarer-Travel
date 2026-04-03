@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../providers/trip_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/trip_model.dart';
@@ -99,7 +100,7 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildFieldLabel('DEPARTURE'),
-                      _buildTextField(_departureController, 'mm/dd/yyyy', prefix: const Icon(Icons.calendar_today, size: 20)),
+                      _buildDateTile(_departureController, () => _selectDate(context, _departureController, true)),
                     ],
                   ),
                 ),
@@ -109,7 +110,7 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildFieldLabel('RETURN'),
-                      _buildTextField(_returnController, 'mm/dd/yyyy', prefix: const Icon(Icons.calendar_today, size: 20)),
+                      _buildDateTile(_returnController, () => _selectDate(context, _returnController, false)),
                     ],
                   ),
                 ),
@@ -138,6 +139,10 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                 _buildTripTypeButton('GROUP'),
               ],
             ),
+
+            const SizedBox(height: 32),
+            _buildFieldLabel('QUICK CHECKLIST ITEMS'),
+            _buildQuickChecklist(),
             
             const SizedBox(height: 32),
             _buildFieldLabel('BUILD ITINERARY'),
@@ -166,6 +171,119 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _selectDate(BuildContext context, TextEditingController controller, bool isDeparture) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF1E2E46),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF1E2E46),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        controller.text = DateFormat('MM/dd/yyyy').format(picked);
+      });
+    }
+  }
+
+  Widget _buildDateTile(TextEditingController controller, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                controller.text.isEmpty ? 'mm/dd/yyyy' : controller.text,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: controller.text.isEmpty ? const Color(0xFF94A3B8) : const Color(0xFF1E2E46),
+                ),
+              ),
+            ),
+            const Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF64748B)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickChecklist() {
+    return Column(
+      children: _checklistItems.map((item) {
+        final isSelected = _selectedChecklist.contains(item);
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              if (isSelected) {
+                _selectedChecklist.remove(item);
+              } else {
+                _selectedChecklist.add(item);
+              }
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFFF8FAFC) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFE2E8F0),
+                width: isSelected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFCBD5E1),
+                      width: 2,
+                    ),
+                    color: isSelected ? const Color(0xFF1E2E46) : Colors.transparent,
+                  ),
+                  child: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  item,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFF475569),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 

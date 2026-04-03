@@ -13,7 +13,6 @@ class TripListScreen extends StatefulWidget {
 }
 
 class _TripListScreenState extends State<TripListScreen> {
-  final ApiService _api = ApiService();
   List<TripModel> _trips = [];
   bool _isLoading = true;
 
@@ -26,7 +25,7 @@ class _TripListScreenState extends State<TripListScreen> {
   Future<void> _loadTrips() async {
     setState(() => _isLoading = true);
     try {
-      final response = await _api.getTrips();
+      final response = await ApiService().getTrips();
       final List data = response.data;
       setState(() {
         _trips = data.map((t) => TripModel.fromJson(t)).toList();
@@ -35,39 +34,7 @@ class _TripListScreenState extends State<TripListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          // Mock data for demo if API fails or is empty, to match the image
-          _trips = [
-            TripModel(
-              id: '1',
-              userId: 'user1',
-              destination: 'Amalfi Coast, Italy',
-              countryCode: 'IT',
-              startDate: DateTime(2024, 9, 12),
-              endDate: DateTime(2024, 9, 24),
-              status: 'planning',
-              partySize: 4,
-            ),
-            TripModel(
-              id: '2',
-              userId: 'user1',
-              destination: 'Kyoto, Japan',
-              countryCode: 'JP',
-              startDate: DateTime(2024, 11, 4),
-              endDate: DateTime(2024, 11, 18),
-              status: 'planning',
-              partySize: 2,
-            ),
-            TripModel(
-              id: '3',
-              userId: 'user1',
-              destination: 'Agra, India',
-              countryCode: 'IN',
-              startDate: DateTime.now(),
-              endDate: DateTime.now(),
-              status: 'planning',
-              partySize: 1,
-            ),
-          ];
+          _trips = [];
           _isLoading = false;
         });
       }
@@ -151,6 +118,19 @@ class _TripListScreenState extends State<TripListScreen> {
             // Trip List
             if (_isLoading)
               const Center(child: CircularProgressIndicator())
+            else if (_trips.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(40.0),
+                  child: Column(
+                    children: [
+                      Icon(Icons.map_outlined, size: 64, color: Colors.grey[300]),
+                      const SizedBox(height: 16),
+                      Text('No trips found', style: GoogleFonts.inter(color: Colors.grey[400])),
+                    ],
+                  ),
+                ),
+              )
             else
               ..._trips.map((trip) => _buildTripListItem(trip)),
             
@@ -196,9 +176,6 @@ class _TripListScreenState extends State<TripListScreen> {
   }
 
   Widget _buildTripListItem(TripModel trip) {
-    // Check if it's the "Dates TBD" one (the third one in mockup)
-    final bool isTbd = trip.destination == 'Agra, India';
-    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(24),
@@ -220,8 +197,8 @@ class _TripListScreenState extends State<TripListScreen> {
                     const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF64748B)),
                     const SizedBox(width: 8),
                     Text(
-                      isTbd ? 'Dates TBD' : '${_formatDate(trip.startDate)} — ${_formatDate(trip.endDate)}',
-                      style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), fontStyle: isTbd ? FontStyle.italic : FontStyle.normal),
+                      '${_formatDate(trip.startDate)} — ${_formatDate(trip.endDate)}',
+                      style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B)),
                     ),
                   ],
                 ),

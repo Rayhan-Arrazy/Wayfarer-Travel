@@ -27,23 +27,6 @@ class TripProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         _trips = (response.data as List).map((t) => TripModel.fromJson(t)).toList();
-        
-        // Ensure at least one trip for demonstration if empty
-        if (_trips.isEmpty) {
-          _trips.add(TripModel(
-            id: '507f1f77bcf86cd799439011',
-            userId: '507f191e810c19729de860ea',
-            destination: 'Scandinavia Trip',
-            countryCode: 'SE',
-            countryName: 'Sweden',
-            startDate: DateTime.now(),
-            endDate: DateTime.now().add(const Duration(days: 14)),
-            partySize: 2,
-            notes: 'Test trip',
-            status: 'active',
-          ));
-        }
-
         _upcomingTrip = _findUpcomingTrip();
       }
     } catch (e) {

@@ -27,7 +27,6 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/trips', require('./routes/trips'));
 app.use('/api/journal', require('./routes/journal'));
 app.use('/api/budgets', require('./routes/budgets'));
-app.use('/api/favorites', require('./routes/favorites'));
 app.use('/api/admin', require('./routes/admin'));
 
 // Proxy routes (external API wrappers)
