@@ -1,8 +1,10 @@
 class AppConstants {
   // API Base URL - change this to your server IP/domain
-  static const String baseUrl = 'http://localhost:5000/api/';
+  // static const String baseUrl = 'http://localhost:5000/api/';
+
+  static const String baseUrl = 'https://wayfarer-travel.onrender.com/api/';
   static const String adminUrl = 'http://localhost:3001';
-  
+
   // App Info
   static const String appName = 'Wayfarer';
   static const String appTagline = 'Your Journey, Your Story';
