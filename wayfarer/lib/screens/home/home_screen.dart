@@ -9,6 +9,7 @@ import '../guide/guide_tab.dart';
 import '../tools/tools_tab_screen.dart';
 import '../map/explore_tab.dart';
 import '../journal/journal_screen.dart';
+import '../../config/routes.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -42,6 +43,15 @@ class _HomeScreenState extends State<HomeScreen> {
         onTabSelected: (index) => nav.setIndex(index),
       ),
       body: _tabs[currentIndex],
+      floatingActionButton: currentIndex == 3 ? FloatingActionButton(
+        onPressed: () => Navigator.pushNamed(context, AppRoutes.journalAdd),
+        backgroundColor: const Color(0xFF1E40AF),
+        child: const Icon(Icons.add, color: Colors.white),
+      ) : (currentIndex == 1 ? FloatingActionButton(
+        onPressed: () => Navigator.pushNamed(context, AppRoutes.createTrip),
+        backgroundColor: const Color(0xFF1E40AF),
+        child: const Icon(Icons.add, color: Colors.white),
+      ) : null),
       bottomNavigationBar: _buildBottomNav(currentIndex, nav),
     );
   }
