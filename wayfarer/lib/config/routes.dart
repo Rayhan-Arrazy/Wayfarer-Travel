@@ -119,6 +119,11 @@ class LoadingRedirect extends StatelessWidget {
       return const HomeScreen();
     }
 
-    return const LoginScreen();
+    // Auto-login as guest for development convenience
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      auth.continueAsGuest();
+    });
+
+    return const LoadingWidget();
   }
 }

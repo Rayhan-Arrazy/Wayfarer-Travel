@@ -10,6 +10,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _isAuthenticated = false;
+  bool _isGuest = false;
   
   final ApiService _apiService = ApiService();
 
@@ -17,6 +18,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _isAuthenticated;
+  bool get isGuest => _isGuest;
   bool get isAdmin => _user?.isAdmin ?? false;
 
   Future<void> init() async {
@@ -129,12 +131,24 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     _user = null;
     _isAuthenticated = false;
+    _isGuest = false;
     _apiService.setToken(null);
     
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(AppConstants.tokenKey);
     await prefs.remove(AppConstants.userKey);
     
+    notifyListeners();
+  }
+
+  void continueAsGuest() {
+    _isGuest = true;
+    _isAuthenticated = true; // Treat guest as authenticated for navigation purposes
+    _user = UserModel(
+      id: 'guest',
+      name: 'Guest User',
+      email: 'guest@wayfarer.local',
+    );
     notifyListeners();
   }
 

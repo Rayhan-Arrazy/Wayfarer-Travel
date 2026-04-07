@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
@@ -56,9 +57,14 @@ app.get('/api', (req, res) => {
   res.json({ message: 'Wayfarer API is active' });
 });
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({ message: 'Wayfarer API Server' });
+// Serve Flutter Web Build
+app.use(express.static(path.join(__dirname, '../wayfarer/build/web')));
+
+// Root route - serve index.html for Flutter Web
+app.get('*', (req, res, next) => {
+  // If request contains /api/, skip to next (let API routes handle it)
+  if (req.url.startsWith('/api/')) return next();
+  res.sendFile(path.join(__dirname, '../wayfarer/build/web/index.html'));
 });
 
 // 404 handler
