@@ -57,15 +57,25 @@ app.get('/api', (req, res) => {
   res.json({ message: 'Wayfarer API is active' });
 });
 
-// Serve Flutter Web Build
-app.use(express.static(path.join(__dirname, '../wayfarer/build/web')));
+// Serve Flutter Web Build (Only if exists)
+const webBuildPath = path.join(__dirname, '../wayfarer/build/web');
+const fs = require('fs');
 
-// Root route - serve index.html for Flutter Web
-app.get('*', (req, res, next) => {
-  // If request contains /api/, skip to next (let API routes handle it)
-  if (req.url.startsWith('/api/')) return next();
-  res.sendFile(path.join(__dirname, '../wayfarer/build/web/index.html'));
-});
+if (fs.existsSync(webBuildPath)) {
+  app.use(express.static(webBuildPath));
+  app.get('*', (req, res, next) => {
+    if (req.url.startsWith('/api/')) return next();
+    res.sendFile(path.join(webBuildPath, 'index.html'));
+  });
+} else {
+  // If no web build, root shows API status
+  app.get('/', (req, res) => {
+    res.json({ 
+      status: 'API Active', 
+      message: 'Wayfarer Backend is running. Access API via /api/' 
+    });
+  });
+}
 
 // 404 handler
 app.use((req, res) => {
