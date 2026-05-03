@@ -322,7 +322,7 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ],
                 ),
-              MarkerLayer(markers: _markers, alignment: Alignment.topCenter),
+              MarkerLayer(markers: _markers, alignment: Alignment.bottomCenter),
               MarkerLayer(markers: [
                 Marker(
                   point: _currentLocation,

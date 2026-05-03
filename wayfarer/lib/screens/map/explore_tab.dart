@@ -40,10 +40,10 @@ class _ExploreTabState extends State<ExploreTab> {
         permission = await Geolocator.requestPermission();
       }
 
-      // Use high accuracy but with a small time limit to ensure responsiveness
+      // Use high accuracy but with a larger time limit to ensure responsiveness
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 5),
+        timeLimit: const Duration(seconds: 10),
       );
       
       if (!mounted) return;
@@ -52,8 +52,8 @@ class _ExploreTabState extends State<ExploreTab> {
         _isLoading = true; // Trigger loader while fetching API
       });
 
-      // Fetch within strictly 500M as requested
-      final response = await _api.getNearbyPlaces(pos.latitude, pos.longitude, 'all', radius: 500);
+      // Fetch within 1.5KM to ensure we find essential locations
+      final response = await _api.getNearbyPlaces(pos.latitude, pos.longitude, 'all', radius: 1500);
       final List<dynamic> elements = response.data['elements'] ?? [];
       
       Map<String, List<Map<String, dynamic>>> newCategorizedItems = {
@@ -237,7 +237,7 @@ class _ExploreTabState extends State<ExploreTab> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text('500M RADIUS ACTIVE', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w900, color: const Color(0xFFEF4444), letterSpacing: 1.0)),
+                          Text('1.5KM RADIUS ACTIVE', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w900, color: const Color(0xFFEF4444), letterSpacing: 1.0)),
                           Text(
                             _currentPosition != null 
                             ? '${_currentPosition!.latitude.toStringAsFixed(4)} N, ${_currentPosition!.longitude.toStringAsFixed(4)} E'
@@ -263,9 +263,9 @@ class _ExploreTabState extends State<ExploreTab> {
                         children: [
                           Icon(Icons.location_searching_rounded, size: 48, color: Colors.grey[200]),
                           const SizedBox(height: 16),
-                          Text('Still searching for locations...', style: GoogleFonts.inter(color: Colors.grey)),
+                          Text('No locations found nearby', style: GoogleFonts.inter(color: Colors.grey, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
-                          Text('Check connection or zoom out map.', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400])),
+                          Text('Try moving to a more central area or refresh.', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400])),
                         ],
                       ),
                     ))
