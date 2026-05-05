@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wayfarer/models/user_model.dart';
+import 'package:wayfarer/providers/auth_provider.dart';
 
 void main() {
   group('UserModel Tests', () {
@@ -43,6 +44,19 @@ void main() {
 
       expect(json['name'], 'John');
       expect(json['email'], 'john@example.com');
+    });
+  });
+
+  group('AuthProvider Tests', () {
+    test('continueAsGuest should set guest user correctly', () {
+      final authProvider = AuthProvider();
+      
+      authProvider.continueAsGuest();
+      
+      expect(authProvider.isGuest, isTrue);
+      expect(authProvider.isAuthenticated, isTrue);
+      expect(authProvider.user?.name, 'Guest User');
+      expect(authProvider.user?.id, 'guest');
     });
   });
 }
