@@ -45,7 +45,7 @@ class _ExploreTabState extends State<ExploreTab> {
 
       // 2. ACCURATE UPDATE: Get fresh position in background
       final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium, // Medium is faster than High
+        desiredAccuracy: LocationAccuracy.medium, 
         timeLimit: const Duration(seconds: 4),
       );
       
@@ -81,7 +81,6 @@ class _ExploreTabState extends State<ExploreTab> {
       for (var e in elements) {
         final tags = e['tags'] ?? {};
         
-        // FILTER: Fallback to amenity/tourism type if name is missing to ensure POIs are shown
         final name = tags['name'] ?? tags['brand'] ?? tags['operator'] ?? _getSubtitle(tags).split('•').first.trim();
         if (name.isEmpty) continue;
 
@@ -128,13 +127,11 @@ class _ExploreTabState extends State<ExploreTab> {
         }
       }
 
-      // Sort every category by distance and limit to 5 per category
       newCategorizedItems.forEach((key, list) {
         list.sort((a, b) => (a['distance'] as double).compareTo(b['distance'] as double));
         newCategorizedItems[key] = list.take(5).toList();
       });
 
-      // Clear empty categories
       newCategorizedItems.removeWhere((key, value) => value.isEmpty);
 
       if (!mounted) return;
@@ -185,7 +182,6 @@ class _ExploreTabState extends State<ExploreTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Hero
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
@@ -274,9 +270,9 @@ class _ExploreTabState extends State<ExploreTab> {
                         children: [
                           Icon(Icons.location_searching_rounded, size: 48, color: Colors.grey[200]),
                           const SizedBox(height: 16),
-                          Text('Still searching for locations...', style: GoogleFonts.inter(color: Colors.grey)),
+                          Text('No locations found nearby', style: GoogleFonts.inter(color: Colors.grey, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
-                          Text('Check connection or zoom out map.', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400])),
+                          Text('Try moving to a more central area or refresh.', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400])),
                         ],
                       ),
                     ))

@@ -88,7 +88,6 @@ router.get('/nearby', async (req, res) => {
     };
     
     if (type === 'all' || type.includes('all')) {
-      // Find EVERYTHING with major traveler tags
       overpassFilter = `
         nwr["amenity"](around:${rad},${lat},${lng});
         nwr["tourism"](around:${rad},${lat},${lng});
@@ -152,13 +151,10 @@ router.get('/route', async (req, res) => {
         'Routing'
       );
       
-      // Normalize response
       let geojson;
       if (data.features && data.features.length > 0) {
-        // ORS format
         geojson = data.features[0].geometry;
       } else if (data.routes && data.routes.length > 0) {
-        // OSRM format
         geojson = data.routes[0].geometry;
       }
       
@@ -175,7 +171,7 @@ router.get('/route', async (req, res) => {
   }
 });
 
-// @route   GET /api/proxy/places/wikipedia
+// @route   GET /api/proxy/places/wikipedia/:place
 // @desc    Get Wikipedia summary for a place
 router.get('/wikipedia/:place', async (req, res) => {
   try {
