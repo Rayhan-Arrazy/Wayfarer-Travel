@@ -35,7 +35,7 @@ class WayfarerDrawer extends StatelessWidget {
                     color: const Color(0xFFDBEAFE),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.person, color: Color(0xFF132F5C), size: 28),
+                  child: const Icon(Icons.person, color: Color(0xFF0B1B32), size: 28),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -44,7 +44,7 @@ class WayfarerDrawer extends StatelessWidget {
                     style: GoogleFonts.outfit(
                       fontSize: 20, 
                       fontWeight: FontWeight.bold, 
-                      color: const Color(0xFF132F5C)
+                      color: const Color(0xFF0B1B32)
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -123,9 +123,9 @@ class WayfarerDrawer extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(isActive ? activeIcon : icon, color: isActive ? const Color(0xFF1E40AF) : const Color(0xFF64748B), size: 22),
+            Icon(isActive ? activeIcon : icon, color: isActive ? const Color(0xFF0B1B32) : const Color(0xFF64748B), size: 22),
             const SizedBox(width: 16),
-            Text(label, style: GoogleFonts.inter(fontSize: 14, fontWeight: isActive ? FontWeight.bold : FontWeight.w600, color: isActive ? const Color(0xFF1E40AF) : const Color(0xFF64748B))),
+            Text(label, style: GoogleFonts.inter(fontSize: 14, fontWeight: isActive ? FontWeight.bold : FontWeight.w600, color: isActive ? const Color(0xFF0B1B32) : const Color(0xFF64748B))),
           ],
         ),
       ),

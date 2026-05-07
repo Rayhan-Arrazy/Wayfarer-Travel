@@ -42,7 +42,7 @@ class _PlanTabState extends State<PlanTab> {
               children: [
             Text('WORKSPACE', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.0)),
             const SizedBox(height: 8),
-            Text('Trip Planning Hub', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+            Text('Trip Planning Hub', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32))),
             const SizedBox(height: 24),
             
             _buildNewJourneyButton(context),
@@ -50,9 +50,9 @@ class _PlanTabState extends State<PlanTab> {
             const SizedBox(height: 48),
             Row(
               children: [
-                const Icon(Icons.airplanemode_active, color: Color(0xFF132F5C), size: 20),
+                const Icon(Icons.airplanemode_active, color: Color(0xFF0B1B32), size: 20),
                 const SizedBox(width: 12),
-                Text('Active & Upcoming Trips', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+                Text('Active & Upcoming Trips', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32))),
               ],
             ),
             const SizedBox(height: 24),
@@ -80,7 +80,7 @@ class _PlanTabState extends State<PlanTab> {
         icon: const Icon(Icons.add, color: Colors.white),
         label: Text('New Journey', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF4A6083),
+          backgroundColor: const Color(0xFF0B1B32),
           elevation: 4,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
@@ -102,7 +102,7 @@ class _PlanTabState extends State<PlanTab> {
           border: Border.all(color: const Color(0xFFF1F5F9)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF1E2E46).withOpacity(0.05),
+              color: const Color(0xFF0B1B32).withOpacity(0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),

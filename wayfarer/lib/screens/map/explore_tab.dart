@@ -24,13 +24,6 @@ class _ExploreTabState extends State<ExploreTab> {
     _loadNearbyData();
   }
 
-  // Load when the widget is rebuilt (e.g. coming back from map)
-  @override
-  void didUpdateWidget(ExploreTab oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _loadNearbyData();
-  }
-
   Future<void> _loadNearbyData() async {
     if (!mounted) return;
     
@@ -40,20 +33,38 @@ class _ExploreTabState extends State<ExploreTab> {
         permission = await Geolocator.requestPermission();
       }
 
-      // Use high accuracy but with a small time limit to ensure responsiveness
+      // 1. QUICK START: Use last known position if available for instant load
+      final lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null && _currentPosition == null) {
+        setState(() {
+          _currentPosition = lastPos;
+          _isLoading = true;
+        });
+        _fetchAndDisplay(lastPos);
+      }
+
+      // 2. ACCURATE UPDATE: Get fresh position in background
       final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 5),
+        desiredAccuracy: LocationAccuracy.medium, // Medium is faster than High
+        timeLimit: const Duration(seconds: 4),
       );
       
       if (!mounted) return;
       setState(() {
         _currentPosition = pos;
-        _isLoading = true; // Trigger loader while fetching API
+        _isLoading = true;
       });
 
-      // Fetch within strictly 500M as requested
-      final response = await _api.getNearbyPlaces(pos.latitude, pos.longitude, 'all', radius: 500);
+      await _fetchAndDisplay(pos);
+    } catch (e) {
+      debugPrint('ExploreTab Load Error: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _fetchAndDisplay(Position pos) async {
+    try {
+      final response = await _api.getNearbyPlaces(pos.latitude, pos.longitude, 'all', radius: 3000);
       final List<dynamic> elements = response.data['elements'] ?? [];
       
       Map<String, List<Map<String, dynamic>>> newCategorizedItems = {
@@ -70,9 +81,9 @@ class _ExploreTabState extends State<ExploreTab> {
       for (var e in elements) {
         final tags = e['tags'] ?? {};
         
-        // FILTER: Only show places with a proper name/brand to avoid generic dots
-        final name = tags['name'] ?? tags['brand'] ?? tags['operator'];
-        if (name == null) continue;
+        // FILTER: Fallback to amenity/tourism type if name is missing to ensure POIs are shown
+        final name = tags['name'] ?? tags['brand'] ?? tags['operator'] ?? _getSubtitle(tags).split('•').first.trim();
+        if (name.isEmpty) continue;
 
         final lat = (e['lat'] ?? e['center']?['lat'])?.toDouble() ?? 0.0;
         final lon = (e['lon'] ?? e['center']?['lon'])?.toDouble() ?? 0.0;
@@ -193,10 +204,10 @@ class _ExploreTabState extends State<ExploreTab> {
                          Container(
                            padding: const EdgeInsets.all(12),
                            decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(12)),
-                           child: const Icon(Icons.map, color: Color(0xFF132F5C), size: 32),
+                           child: const Icon(Icons.map, color: Color(0xFF0B1B32), size: 32),
                          ),
                          const SizedBox(height: 24),
-                         Text('Nearby Explorer', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+                         Text('Nearby Explorer', style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32))),
                          const SizedBox(height: 8),
                          Text('ESSENTIAL DATA IN YOUR AREA', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1.5)),
                          const SizedBox(height: 24),
@@ -206,7 +217,7 @@ class _ExploreTabState extends State<ExploreTab> {
                            child: ElevatedButton(
                               onPressed: () => Navigator.pushNamed(context, AppRoutes.map),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF132F5C),
+                                backgroundColor: const Color(0xFF0B1B32),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -225,7 +236,7 @@ class _ExploreTabState extends State<ExploreTab> {
                     children: [
                       Row(
                         children: [
-                          Text('What matters\nnearby', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46), height: 1.1)),
+                          Text('What matters\nnearby', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32), height: 1.1)),
                           const SizedBox(width: 12),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -237,7 +248,7 @@ class _ExploreTabState extends State<ExploreTab> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text('500M RADIUS ACTIVE', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w900, color: const Color(0xFFEF4444), letterSpacing: 1.0)),
+                          Text('3KM RADIUS ACTIVE', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w900, color: const Color(0xFFEF4444), letterSpacing: 1.0)),
                           Text(
                             _currentPosition != null 
                             ? '${_currentPosition!.latitude.toStringAsFixed(4)} N, ${_currentPosition!.longitude.toStringAsFixed(4)} E'
@@ -254,7 +265,7 @@ class _ExploreTabState extends State<ExploreTab> {
                   if (_isLoading)
                     const Center(child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
-                      child: CircularProgressIndicator(color: Color(0xFF132F5C)),
+                      child: CircularProgressIndicator(color: Color(0xFF0B1B32)),
                     ))
                   else if (_categorizedItems.isEmpty)
                     Center(child: Padding(
@@ -320,13 +331,13 @@ class _ExploreTabState extends State<ExploreTab> {
                    Row(
                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                      children: [
-                       Flexible(child: Text(item['title'], style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46)), overflow: TextOverflow.ellipsis)),
-                       Text(item['distanceText'], style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+                       Flexible(child: Text(item['title'], style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32)), overflow: TextOverflow.ellipsis)),
+                       Text(item['distanceText'], style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32))),
                      ],
                    ),
                    Text(item['subtitle'], style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B))),
                    const SizedBox(height: 4),
-                   Text(item['badge'], style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w900, color: const Color(0xFF1E40AF), letterSpacing: 0.5)),
+                   Text(item['badge'], style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w900, color: const Color(0xFF0B1B32), letterSpacing: 0.5)),
                  ],
                ),
              ),

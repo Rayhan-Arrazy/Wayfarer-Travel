@@ -22,7 +22,7 @@ class _MapScreenState extends State<MapScreen> {
   List<Marker> _markers = [];
   List<LatLng> _routePoints = [];
   List<String> _selectedTypes = ['all'];
-  int _selectedRadius = 1000;
+  int _selectedRadius = 3000;
   bool _isLoading = false;
   Map<String, dynamic>? _selectedPlace;
   bool _didInitArgs = false;
@@ -86,7 +86,22 @@ class _MapScreenState extends State<MapScreen> {
         permission = await Geolocator.requestPermission();
       }
 
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      // 1. Instant load with last known position
+      final lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null) {
+        setState(() {
+          _currentLocation = LatLng(lastPos.latitude, lastPos.longitude);
+        });
+        _mapController.move(_currentLocation, _zoom);
+        _fetchNearbyPlaces(); // Fetch in background
+      }
+
+      // 2. Fresh lock
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 4),
+      );
+      
       setState(() {
         _currentLocation = LatLng(position.latitude, position.longitude);
       });
@@ -263,7 +278,7 @@ class _MapScreenState extends State<MapScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E2E46).withOpacity(0.9),
+                color: const Color(0xFF0B1B32).withOpacity(0.9),
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2))],
               ),
@@ -276,7 +291,7 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.location_on, color: Color(0xFF1E2E46), size: 34),
+            const Icon(Icons.location_on, color: Color(0xFF0B1B32), size: 34),
           ],
         ),
       ),
@@ -352,9 +367,9 @@ class _MapScreenState extends State<MapScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1E2E46))),
+                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0B1B32))),
                       const SizedBox(width: 12),
-                      Text('Working...', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+                      Text('Working...', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32))),
                     ],
                   ),
                 ),
@@ -371,7 +386,7 @@ class _MapScreenState extends State<MapScreen> {
                     child: Container(
                       height: 56, width: 56,
                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, 4))]),
-                      child: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF1E2E46), size: 18),
+                      child: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF0B1B32), size: 18),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -388,12 +403,12 @@ class _MapScreenState extends State<MapScreen> {
                             child: TextField(
                               controller: _searchController,
                               onSubmitted: _performSearch,
-                              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: const Color(0xFF1E2E46)),
+                              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: const Color(0xFF0B1B32)),
                               decoration: const InputDecoration(hintText: 'Search near you...', hintStyle: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)), border: InputBorder.none),
                             ),
                           ),
                           Container(height: 24, width: 1, color: const Color(0xFFE2E8F0), margin: const EdgeInsets.symmetric(horizontal: 8)),
-                          IconButton(icon: const Icon(Icons.tune_rounded, color: Color(0xFF1E2E46), size: 22), onPressed: _showFilters),
+                          IconButton(icon: const Icon(Icons.tune_rounded, color: Color(0xFF0B1B32), size: 22), onPressed: _showFilters),
                         ],
                       ),
                     ),
@@ -412,7 +427,7 @@ class _MapScreenState extends State<MapScreen> {
                   mini: true, heroTag: 'location_btn',
                   backgroundColor: Colors.white,
                   onPressed: _initLocation,
-                  child: const Icon(Icons.my_location, color: Color(0xFF1E2E46)),
+                  child: const Icon(Icons.my_location, color: Color(0xFF0B1B32)),
                 ),
                 const SizedBox(height: 16),
                 if (_selectedPlace != null)
@@ -421,7 +436,7 @@ class _MapScreenState extends State<MapScreen> {
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))]),
                     child: Row(
                       children: [
-                        Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFE0E7FF), borderRadius: BorderRadius.circular(12)), child: Icon(_selectedPlace!['icon'], color: const Color(0xFF1E2E46))),
+                        Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFE0E7FF), borderRadius: BorderRadius.circular(12)), child: Icon(_selectedPlace!['icon'], color: const Color(0xFF0B1B32))),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
@@ -429,7 +444,7 @@ class _MapScreenState extends State<MapScreen> {
                             children: [
                               Text(_selectedPlace!['type'], style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF64748B), letterSpacing: 1)),
                               const SizedBox(height: 4),
-                              Text(_selectedPlace!['name'], style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46)), overflow: TextOverflow.ellipsis),
+                              Text(_selectedPlace!['name'], style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32)), overflow: TextOverflow.ellipsis),
                               const SizedBox(height: 2),
                               Text(_selectedPlace!['distance'] == 'Calculating...' ? 'Calculating path...' : '${_selectedPlace!['distance']} • ${_selectedPlace!['hours']}', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B))),
                             ],
@@ -438,7 +453,7 @@ class _MapScreenState extends State<MapScreen> {
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () { _getRouteToPlace(_selectedPlace!['lat'], _selectedPlace!['lng']); },
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E2E46), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0B1B32), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
                           child: const Row(children: [Icon(Icons.directions_rounded, size: 18), SizedBox(width: 4), Text('Route', style: TextStyle(fontWeight: FontWeight.bold))]),
                         ),
                       ],
@@ -469,7 +484,7 @@ class _MapScreenState extends State<MapScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Categories', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+                  Text('Categories', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32))),
                   TextButton(onPressed: () { setModalState(() { _selectedTypes = ['all']; }); setState(() {}); }, child: Text('Reset', style: GoogleFonts.inter(color: const Color(0xFF3B82F6), fontWeight: FontWeight.bold))),
                 ],
               ),
@@ -482,14 +497,14 @@ class _MapScreenState extends State<MapScreen> {
                     onTap: () { setModalState(() { _onSettingsUpdated(cat['type']); }); setState(() {}); },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(14), border: Border.all(color: isSelected ? const Color(0xFF1E2E46) : Colors.transparent)),
+                      decoration: BoxDecoration(color: isSelected ? const Color(0xFF0B1B32) : const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(14), border: Border.all(color: isSelected ? const Color(0xFF0B1B32) : Colors.transparent)),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(cat['icon'], size: 16, color: isSelected ? Colors.white : const Color(0xFF64748B)), const SizedBox(width: 8), Text(cat['label'], style: GoogleFonts.inter(fontSize: 13, fontWeight: isSelected ? FontWeight.bold : FontWeight.w600, color: isSelected ? Colors.white : const Color(0xFF475569)))]),
                     ),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 32),
-              Text('Search Radius', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E2E46))),
+              Text('Search Radius', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32))),
               const SizedBox(height: 16),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -503,7 +518,7 @@ class _MapScreenState extends State<MapScreen> {
                         onTap: () { setModalState(() { _selectedRadius = radius; }); setState(() {}); },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          decoration: BoxDecoration(color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12), border: Border.all(color: isSelected ? const Color(0xFF1E2E46) : const Color(0xFFE2E8F0))),
+                          decoration: BoxDecoration(color: isSelected ? const Color(0xFF0B1B32) : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12), border: Border.all(color: isSelected ? const Color(0xFF0B1B32) : const Color(0xFFE2E8F0))),
                           child: Text(label, style: GoogleFonts.inter(fontSize: 14, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? Colors.white : const Color(0xFF475569))),
                         ),
                       ),
@@ -516,7 +531,7 @@ class _MapScreenState extends State<MapScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () { Navigator.pop(context); _fetchNearbyPlaces(); },
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E2E46), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0B1B32), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
                   child: Text('Apply Filters', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),

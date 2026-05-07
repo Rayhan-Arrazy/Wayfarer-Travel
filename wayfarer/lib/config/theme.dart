@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Brand Colors - Premium Navy & Gold/Orange
-  static const Color primaryColor = Color(0xFF1E2E46); // Deep Navy
+  static const Color primaryColor = Color(0xFF0B1B32); // Ultra-Deep Navy (Brand Logo)
   static const Color accentColor = Color(0xFFFF6D00); // Vibrant Orange
   static const Color secondaryColor = Color(0xFF64B5F6); // Soft Blue
   
@@ -21,7 +21,7 @@ class AppTheme {
   
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [primaryColor, Color(0xFF2D4362)],
+    colors: [primaryColor, Color(0xFF0B1B32)], // Brand Navy to Nuance Navy
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

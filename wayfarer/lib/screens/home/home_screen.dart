@@ -42,14 +42,17 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: currentIndex, 
         onTabSelected: (index) => nav.setIndex(index),
       ),
-      body: _tabs[currentIndex],
+      body: IndexedStack(
+        index: currentIndex,
+        children: _tabs,
+      ),
       floatingActionButton: currentIndex == 3 ? FloatingActionButton(
         onPressed: () => Navigator.pushNamed(context, AppRoutes.journalAdd),
-        backgroundColor: const Color(0xFF1E40AF),
+        backgroundColor: const Color(0xFF0B1B32),
         child: const Icon(Icons.add, color: Colors.white),
       ) : (currentIndex == 1 ? FloatingActionButton(
         onPressed: () => Navigator.pushNamed(context, AppRoutes.createTrip),
-        backgroundColor: const Color(0xFF1E40AF),
+        backgroundColor: const Color(0xFF0B1B32),
         child: const Icon(Icons.add, color: Colors.white),
       ) : null),
       bottomNavigationBar: _buildBottomNav(currentIndex, nav),
@@ -94,9 +97,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(isActive ? activeIcon : icon, color: isActive ? const Color(0xFF1E40AF) : const Color(0xFF64748B), size: 24),
+            Icon(isActive ? activeIcon : icon, color: isActive ? const Color(0xFF0B1B32) : const Color(0xFF64748B), size: 24),
             const SizedBox(height: 6),
-            Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: isActive ? FontWeight.w900 : FontWeight.bold, color: isActive ? const Color(0xFF1E40AF) : const Color(0xFF64748B), letterSpacing: 0.5)),
+            Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: isActive ? FontWeight.w900 : FontWeight.bold, color: isActive ? const Color(0xFF0B1B32) : const Color(0xFF64748B), letterSpacing: 0.5)),
           ],
         ),
       ),

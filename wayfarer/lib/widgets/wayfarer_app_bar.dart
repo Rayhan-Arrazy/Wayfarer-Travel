@@ -25,18 +25,18 @@ class WayfarerAppBar extends StatelessWidget implements PreferredSizeWidget {
       leading: showMenu
           ? IconButton(
               onPressed: () => Scaffold.of(context).openDrawer(),
-              icon: const Icon(Icons.menu, color: Color(0xFF132F5C)),
+              icon: const Icon(Icons.menu, color: Color(0xFF0B1B32)),
             )
           : IconButton(
               onPressed: onBack ?? () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back, color: Color(0xFF132F5C)),
+              icon: const Icon(Icons.arrow_back, color: Color(0xFF0B1B32)),
             ),
       title: Text(
         'Wayfarer',
         style: GoogleFonts.outfit(
           fontSize: 22,
           fontWeight: FontWeight.w800,
-          color: const Color(0xFF132F5C),
+          color: const Color(0xFF0B1B32),
           letterSpacing: -0.5,
         ),
       ),
@@ -48,7 +48,7 @@ class WayfarerAppBar extends StatelessWidget implements PreferredSizeWidget {
             child: CircleAvatar(
               radius: 18,
               backgroundColor: Color(0xFFF1F5F9),
-              child: Icon(Icons.person, color: Color(0xFF132F5C), size: 20),
+              child: Icon(Icons.person, color: Color(0xFF0B1B32), size: 20),
             ),
           ),
         if (!showProfile && extraActions == null)

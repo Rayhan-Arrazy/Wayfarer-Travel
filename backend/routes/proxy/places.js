@@ -65,7 +65,7 @@ router.get('/nearby', async (req, res) => {
   try {
     const lat = parseFloat(req.query.lat);
     const lng = parseFloat(req.query.lng);
-    const rad = parseInt(req.query.radius) || 100;
+    const rad = parseInt(req.query.radius) || 3000;
     const type = req.query.type || 'all';
     
     if (isNaN(lat) || isNaN(lng)) {
@@ -73,9 +73,22 @@ router.get('/nearby', async (req, res) => {
     }
 
     let overpassFilter = '';
+
+    // Map abstract categories to specific OSM tags
+    const categoryMap = {
+      emergency: ['hospital', 'pharmacy', 'clinic', 'doctors', 'dentist'],
+      financial: ['atm', 'bank', 'bureau_de_change', 'money_transfer'],
+      dining: ['restaurant', 'cafe', 'fast_food', 'bar', 'food_court'],
+      restaurant: ['restaurant', 'cafe', 'fast_food', 'bar', 'food_court'],
+      station: ['bus_station', 'taxi', 'bus_stop', 'subway_entrance', 'railway_station'],
+      hotel: ['hotel', 'hostel', 'guest_house', 'motel', 'resort'],
+      tourism: ['museum', 'artwork', 'attraction', 'viewpoint', 'gallery', 'zoo'],
+      shopping: ['supermarket', 'convenience', 'clothes', 'mall', 'department_store'],
+      services: ['post_office', 'library', 'townhall', 'police', 'fire_station']
+    };
     
     if (type === 'all' || type.includes('all')) {
-      // Find EVERYTHING with major traveler tags in the small radius
+      // Find EVERYTHING with major traveler tags
       overpassFilter = `
         nwr["amenity"](around:${rad},${lat},${lng});
         nwr["tourism"](around:${rad},${lat},${lng});
@@ -87,12 +100,16 @@ router.get('/nearby', async (req, res) => {
     } else {
       const requestedTypes = type.split(',');
       requestedTypes.forEach(t => {
+        const osmValues = categoryMap[t] || [t];
+        const valueRegex = osmValues.join('|');
+        
         overpassFilter += `
-          nwr["amenity"="${t}"](around:${rad},${lat},${lng});
-          nwr["tourism"="${t}"](around:${rad},${lat},${lng});
-          nwr["shop"="${t}"](around:${rad},${lat},${lng});
-          nwr["historic"="${t}"](around:${rad},${lat},${lng});
-          nwr["leisure"="${t}"](around:${rad},${lat},${lng});
+          nwr["amenity"~"${valueRegex}"](around:${rad},${lat},${lng});
+          nwr["tourism"~"${valueRegex}"](around:${rad},${lat},${lng});
+          nwr["shop"~"${valueRegex}"](around:${rad},${lat},${lng});
+          nwr["historic"~"${valueRegex}"](around:${rad},${lat},${lng});
+          nwr["leisure"~"${valueRegex}"](around:${rad},${lat},${lng});
+          nwr["railway"~"${valueRegex}"](around:${rad},${lat},${lng});
         `;
       });
     }
@@ -106,7 +123,8 @@ router.get('/nearby', async (req, res) => {
     `;
 
     const data = await axiosGet(`https://overpass-api.de/api/interpreter`, {
-      params: { data: overpassQuery }
+      params: { data: overpassQuery },
+      headers: { 'User-Agent': 'Wayfarer-Travel-App/1.0' }
     });
     
     res.json(data);

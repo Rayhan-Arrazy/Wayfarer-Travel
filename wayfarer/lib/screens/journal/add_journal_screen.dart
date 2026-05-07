@@ -95,7 +95,7 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
         extraActions: [
           TextButton(
             onPressed: _handlePublish,
-            child: Text('Publish', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: const Color(0xFF132F5C))),
+            child: Text('Publish', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32))),
           ),
         ],
       ),
@@ -117,13 +117,13 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
               ),
               child: Row(
                 children: [
-                   const Icon(Icons.calendar_today, color: Color(0xFF1E40AF), size: 20),
+                   const Icon(Icons.calendar_today, color: Color(0xFF0B1B32), size: 20),
                    const SizedBox(width: 16),
                    Column(
                      crossAxisAlignment: CrossAxisAlignment.start,
                      children: [
                        Text("TODAY'S DATE", style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))),
-                       Text(dateStr, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1E40AF))),
+                       Text(dateStr, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0B1B32))),
                      ],
                    ),
                 ],
@@ -176,7 +176,7 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
               child: ElevatedButton(
                 onPressed: _handlePublish,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E2E46),
+                  backgroundColor: const Color(0xFF0B1B32),
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -224,15 +224,15 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF1E40AF) : const Color(0xFFEFF6FF),
+          color: isSelected ? const Color(0xFF0B1B32) : const Color(0xFFEFF6FF),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: isSelected ? Colors.white : const Color(0xFF1E40AF)),
+            Icon(icon, size: 18, color: isSelected ? Colors.white : const Color(0xFF0B1B32)),
             const SizedBox(width: 8),
-            Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : const Color(0xFF1E40AF))),
+            Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : const Color(0xFF0B1B32))),
           ],
         ),
       ),
