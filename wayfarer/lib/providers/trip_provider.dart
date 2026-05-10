@@ -3,11 +3,13 @@ import '../models/trip_model.dart';
 import '../services/api_service.dart';
 
 class TripProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService;
   List<TripModel> _trips = [];
   TripModel? _upcomingTrip;
   TripModel? _selectedTrip;
   bool _isLoading = false;
+
+  TripProvider({ApiService? apiService}) : _apiService = apiService ?? ApiService();
 
   List<TripModel> get trips => _trips;
   TripModel? get upcomingTrip => _upcomingTrip;

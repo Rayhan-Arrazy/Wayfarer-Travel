@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 
 class CurrencyProvider with ChangeNotifier {
-  final Dio _dio = Dio();
+  final Dio _dio;
   final String _baseUrl = 'https://open.er-api.com/v6/latest';
+
+  CurrencyProvider({Dio? dio}) : _dio = dio ?? Dio();
   
   Map<String, dynamic> _rates = {};
   bool _isLoading = false;

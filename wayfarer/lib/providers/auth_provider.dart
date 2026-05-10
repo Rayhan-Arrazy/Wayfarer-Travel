@@ -12,7 +12,9 @@ class AuthProvider extends ChangeNotifier {
   bool _isAuthenticated = false;
   bool _isGuest = false;
   
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService;
+
+  AuthProvider({ApiService? apiService}) : _apiService = apiService ?? ApiService();
 
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
