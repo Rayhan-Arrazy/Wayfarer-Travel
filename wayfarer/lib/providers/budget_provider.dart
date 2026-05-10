@@ -3,9 +3,11 @@ import '../models/budget_model.dart';
 import '../services/api_service.dart';
 
 class BudgetProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService;
   List<BudgetModel> _budgets = [];
   bool _isLoading = false;
+
+  BudgetProvider({ApiService? apiService}) : _apiService = apiService ?? ApiService();
 
   List<BudgetModel> get budgets => _budgets;
   bool get isLoading => _isLoading;

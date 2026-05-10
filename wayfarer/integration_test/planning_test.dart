@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:wayfarer/main.dart' as app;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
 
-  group('Journal Integration Tests', () {
-    testWidgets('navigate to journal and view entries', (tester) async {
+  group('Planning Integration Tests', () {
+    testWidgets('navigate to planning and view trips', (tester) async {
       app.main();
       await tester.pumpAndSettle();
 
@@ -20,11 +22,11 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      final journalNavItem = find.text('Journal');
-      await tester.tap(journalNavItem);
+      final planNavItem = find.text('Plan');
+      await tester.tap(planNavItem);
       await tester.pumpAndSettle();
 
-      expect(find.text('My Travel Journal'), findsOneWidget);
+      expect(find.text('My Trips'), findsOneWidget);
     });
   });
 }
