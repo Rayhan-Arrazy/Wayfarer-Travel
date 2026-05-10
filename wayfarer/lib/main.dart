@@ -12,6 +12,8 @@ import 'providers/budget_provider.dart';
 import 'providers/guide_provider.dart';
 import 'providers/currency_provider.dart';
 import 'providers/navigation_provider.dart';
+import 'providers/translation_provider.dart';
+import 'services/tts_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,6 +58,8 @@ class WayfarerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CurrencyProvider()),
         ChangeNotifierProvider(create: (_) => BudgetProvider()),
         ChangeNotifierProvider(create: (_) => NavigationProvider()),
+        ChangeNotifierProvider(create: (_) => TranslationProvider()),
+        Provider(create: (_) => TtsService()..init()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, auth, _) {

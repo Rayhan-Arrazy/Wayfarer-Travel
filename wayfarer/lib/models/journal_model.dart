@@ -42,7 +42,7 @@ class JournalEntryModel {
           .toList() ?? [],
       mood: json['mood'] ?? '',
       distanceTraveled: (json['distanceTraveled'] ?? 0).toDouble(),
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      createdAt: json['createdAt'] != null ? (DateTime.tryParse(json['createdAt']) ?? DateTime.now()) : DateTime.now(),
     );
   }
 
