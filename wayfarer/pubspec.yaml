@@ -66,6 +66,13 @@ flutter:
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter.ttf
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-SemiBold.ttf
+        - asset: assets/fonts/Inter-Bold.ttf
+        - asset: assets/fonts/Inter-ExtraBold.ttf
     - family: Outfit
       fonts:
         - asset: assets/fonts/Outfit.ttf
+        - asset: assets/fonts/Outfit-Regular.ttf
+        - asset: assets/fonts/Outfit-Bold.ttf
+        - asset: assets/fonts/Outfit-ExtraBold.ttf

@@ -69,3 +69,26 @@ Guidelines for managing test code.
 *   **Branching Strategy**: All new tests must be developed in the `project2-testing` branch before merging to `main`.
 *   **Commit Messages**: Use prefixes like `[TEST-AUTH]` or `[TEST-INT]` for clarity.
 *   **CI/CD**: Tests are automatically triggered on every push to verify branch integrity.
+
+## 7. How to Run Tests
+Use these commands to run tests by feature or type.
+
+### Unit Tests (Logic)
+*   **Auth**: `flutter test test/unit/features/auth/`
+*   **Planning**: `flutter test test/unit/features/planning/`
+*   **Journal**: `flutter test test/unit/features/journal/`
+*   **Budget**: `flutter test test/unit/features/budget/`
+*   **Weather**: `flutter test test/unit/features/weather/`
+*   **Tools**: `flutter test test/unit/features/tools/`
+
+### Widget Tests (UI)
+*   **Login**: `flutter test test/login_widget_test.dart`
+*   **Register**: `flutter test test/register_widget_test.dart`
+*   **Tools**: `flutter test test/tools_widget_test.dart`
+
+### Integration Tests (E2E on Device)
+Run these with your device ID (**`f9b16f26`**):
+*   **Auth Flow**: `flutter test -d f9b16f26 test/integration_test/auth_test.dart`
+*   **Planning Flow**: `flutter test -d f9b16f26 test/integration_test/planning_test.dart`
+*   **Journal Flow**: `flutter test -d f9b16f26 test/integration_test/journal_test.dart`
+*   **Tools Flow**: `flutter test -d f9b16f26 test/integration_test/tools_test.dart`
