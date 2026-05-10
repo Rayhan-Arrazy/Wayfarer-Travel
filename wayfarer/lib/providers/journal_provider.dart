@@ -3,9 +3,11 @@ import '../models/journal_model.dart';
 import '../services/api_service.dart';
 
 class JournalProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService;
   List<JournalEntryModel> _entries = [];
   bool _isLoading = false;
+
+  JournalProvider({ApiService? apiService}) : _apiService = apiService ?? ApiService();
 
   List<JournalEntryModel> get entries => _entries;
   bool get isLoading => _isLoading;
