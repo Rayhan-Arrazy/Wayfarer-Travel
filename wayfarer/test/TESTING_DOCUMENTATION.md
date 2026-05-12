@@ -1,94 +1,115 @@
-# Wayfarer Testing Suite Documentation
+# Wayfarer Master Testing Guide
 
-This document provides a complete overview of the automated testing infrastructure for the Wayfarer application, covering Unit, Widget, and Integration testing.
+This document is the single source of truth for the Wayfarer testing suite. It covers how to run, manage, and scale tests across the three main layers: **Unit**, **Widget**, and **Integration**.
 
-## 1. Test Scenario
-High-level objectives for each feature module.
+---
 
-| Feature | Scenario ID | Description |
+## 1. Directory Structure
+
+| Test Type | Location | Purpose |
 | :--- | :--- | :--- |
-| **Authentication** | TS-AUTH | Verify user login, registration, and session management logic. |
-| **Trip Planning** | TS-PLAN | Validate trip creation, duration calculation, and checklist progress logic. |
-| **Travel Journal** | TS-JOURNAL | Ensure journal entries can be created, updated, and correctly serialized. |
-| **Traveler Tools** | TS-TOOLS | Verify currency conversion accuracy and translation service integration. |
+| **Unit** | `test/unit/features/` | Logic, Models, and Providers. |
+| **Widget** | `test/` (root) | Individual Screen and Component UI. |
+| **Integration** | `integration_test/` | Full End-to-End flows on real devices. |
 
-## 2. Test Case
-Detailed unit and integration test cases.
+---
 
-### Unit Tests (Feature Logic)
-| ID | Feature | Scenario | Type | Expected Result |
-| :--- | :--- | :--- | :--- | :--- |
-| L-01 | Auth | Valid Login | Positive | User state updated, token saved. |
-| L-02 | Auth | Wrong Password | Negative | Error message: "Invalid credentials". |
-| T-01 | Planning | Model from JSON | Positive | Correct field mapping and duration. |
-| TP-01 | Planning | Fetch Trips | Positive | List updates with API data. |
-| J-01 | Journal | Model from JSON | Positive | Correct field mapping for entries. |
-| C-01 | Tools | Fetch Rates | Positive | Currency rates updated successfully. |
+## 2. Test Scenario & Test Cases
 
-### Integration Tests (E2E)
-| ID | Feature | Scenario | Expected Result |
-| :--- | :--- | :--- | :--- |
-| INT-01 | Auth | Login Flow | Successful navigation to Dashboard. |
-| INT-02 | Planning | Navigation | Access to "My Trips" screen verified. |
-| INT-03 | Tools | Conversion | UI updates with calculated exchange amount. |
+### A. Authentication
+*   **Scenario 01**: User Login Flow
+    *   **TC_01**: Login with valid credentials (Success).
+    *   **TC_02**: Login with invalid password (Error display).
+    *   **TC_03**: Login as Guest (Bypass auth).
+*   **Scenario 02**: User Registration
+    *   **TC_04**: Register with new email (Success).
+    *   **TC_05**: Register with existing email (Conflict error).
 
-## 3. Capture Evidence
-Procedures for validating test runs.
+### B. Travel Journal
+*   **Scenario 03**: Journal Entry Management
+    *   **TC_06**: Create new journal entry with image.
+    *   **TC_07**: Edit existing entry.
+    *   **TC_08**: Delete entry and verify removal.
 
-### Automated Logs
-*   **Unit Tests**: Run `flutter test` and redirect output to a log file:
-    ```powershell
-    flutter test > test_evidence_unit.log
-    ```
-*   **Integration Tests**: Capture screenshots during test runs using the `tester.takeScreenshot()` command (supported on physical devices/emulators).
+### C. Trip Planning
+*   **Scenario 04**: Trip Lifecycle
+    *   **TC_09**: Create a new trip with name and dates.
+    *   **TC_10**: Add multiple destinations to a trip.
+    *   **TC_11**: Mark a trip as "Completed".
 
-### Manual Evidence
-*   Evidence screenshots are stored in `/test/evidence/screenshots/` labeled by Test Case ID.
+### D. Tools & Weather
+*   **Scenario 05**: Real-time Conversion & Forecast
+    *   **TC_12**: Convert USD to EUR using live rates.
+    *   **TC_13**: Translate English text to Japanese.
+    *   **TC_14**: Fetch 5-day weather forecast for a destination.
 
-## 4. BUG & DEFECT LOG
-Tracking identified issues during the testing phase.
+### E. Budgeting
+*   **Scenario 06**: Expense Management
+    *   **TC_15**: Add a new expense category (e.g., Food).
+    *   **TC_16**: Add an expense and verify balance update.
+    *   **TC_17**: Set a budget limit and trigger warning on overspend.
 
-| Bug ID | Date | Description | Priority | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| BUG-001 | 2026-05-10 | AuthProvider missing constructor (Fixed) | High | Resolved |
-| BUG-002 | 2026-05-10 | Currency conversion rounding error (Fixed) | Medium | Resolved |
-| BUG-003 | 2026-05-10 | Integration test timeout on slow network | Low | Open |
+---
 
-## 5. Test Result Summary
-Current status of the testing suite.
-
-*   **Total Test Cases**: 30
-*   **Unit Tests Passed**: 24/24
-*   **Widget Tests Passed**: 2/2
-*   **Integration Tests Passed**: 4/4
-*   **Pass Rate**: **100%** (Current Build)
-
-## 6. Version Control
-Guidelines for managing test code.
-
-*   **Branching Strategy**: All new tests must be developed in the `project2-testing` branch before merging to `main`.
-*   **Commit Messages**: Use prefixes like `[TEST-AUTH]` or `[TEST-INT]` for clarity.
-*   **CI/CD**: Tests are automatically triggered on every push to verify branch integrity.
-
-## 7. How to Run Tests
-Use these commands to run tests by feature or type.
+## 3. How to Run Tests
 
 ### Unit Tests (Logic)
-*   **Auth**: `flutter test test/unit/features/auth/`
-*   **Planning**: `flutter test test/unit/features/planning/`
-*   **Journal**: `flutter test test/unit/features/journal/`
-*   **Budget**: `flutter test test/unit/features/budget/`
-*   **Weather**: `flutter test test/unit/features/weather/`
-*   **Tools**: `flutter test test/unit/features/tools/`
+*   **Run All**: `flutter test test/unit/`
+*   **Specific Module**: `flutter test test/unit/features/[module_name]/`
 
 ### Widget Tests (UI)
-*   **Login**: `flutter test test/login_widget_test.dart`
-*   **Register**: `flutter test test/register_widget_test.dart`
-*   **Tools**: `flutter test test/tools_widget_test.dart`
+*   **Run All**: `flutter test test/*.dart`
+*   **Auth UI**: `flutter test test/login_widget_test.dart`
+*   **Tools UI**: `flutter test test/tools_widget_test.dart`
 
-### Integration Tests (E2E on Device)
-Run these with your device ID (**`f9b16f26`**):
-*   **Auth Flow**: `flutter test -d f9b16f26 test/integration_test/auth_test.dart`
-*   **Planning Flow**: `flutter test -d f9b16f26 test/integration_test/planning_test.dart`
-*   **Journal Flow**: `flutter test -d f9b16f26 test/integration_test/journal_test.dart`
-*   **Tools Flow**: `flutter test -d f9b16f26 test/integration_test/tools_test.dart`
+### Integration Tests (E2E on Phone)
+*   **Target Device**: ID `f9b16f26`
+*   **Auth Flow**: `flutter test -d f9b16f26 integration_test/auth_test.dart`
+*   **Journal Flow**: `flutter test -d f9b16f26 integration_test/journal_test.dart`
+*   **Planning Flow**: `flutter test -d f9b16f26 integration_test/planning_test.dart`
+*   **Tools Flow**: `flutter test -d f9b16f26 integration_test/tools_test.dart`
+
+---
+
+## 4. Capture Evidence (Submission Requirements)
+
+To document your test runs for project submission:
+
+1.  **Screenshots**: Take shots of "Success" snackbars or "Done" screens.
+2.  **Screen Recording**: Use `adb shell screenrecord /sdcard/test.mp4`.
+3.  **Logs**: Save terminal output to `test_evidence.txt`.
+
+---
+
+## 5. BUG & DEFECT LOG
+
+| Bug ID | Test Case ID | Description | Test Priority | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **BUG_001** | TC_039 | Missing Inter-ExtraBold font weights caused crashes. | Critical | ✅ Fixed |
+| **BUG_002** | SC_01 | Integration tests fail if moved inside /test/ folder. | High | ✅ Fixed |
+
+---
+
+## 6. Test Result Summary (Total: 105 Cases)
+
+| Layer | Cases | Coverage | Result |
+| :--- | :--- | :--- | :--- |
+| **Unit/Logic** | 99 | Core Business Models & Providers | ✅ PASS |
+| **Widget (UI)** | 1 | Auth Screen Component | ✅ PASS |
+| **Integration (E2E)** | 5 | Hardware & API Full Flows | ✅ PASS |
+
+---
+
+## 7. Version Control Best Practices
+
+*   **Branch**: Use `project2-testing` for all testing work.
+*   **Commits**: Prefix with `test:` or `fix:`.
+*   **Sync**: Always pull before pushing to avoid conflicts.
+
+---
+
+## 8. Troubleshooting
+
+*   **MissingPluginException**: Keep tests in root `/integration_test/`.
+*   **Fonts**: Check `pubspec.yaml` for bundled weights.
+*   **ADB**: Ensure your device `f9b16f26` is authorized via `adb devices`.
